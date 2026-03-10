@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,12 +19,14 @@ export default function RegisterScreen({ navigation }: Props) {
 
     const handleRegister = async () => {
         if (!email || !password || !confirmPassword) {
-            Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
+            const msg = 'Lütfen tüm alanları doldurun.';
+            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Hata', msg);
             return;
         }
 
         if (password !== confirmPassword) {
-            Alert.alert('Hata', 'Şifreler eşleşmiyor.');
+            const msg = 'Şifreler eşleşmiyor.';
+            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Hata', msg);
             return;
         }
 
@@ -41,7 +43,9 @@ export default function RegisterScreen({ navigation }: Props) {
             } else if (error.code === 'auth/weak-password') {
                 errorMessage = 'Şifre çok zayıf (en az 6 karakter olmalı).';
             }
-            Alert.alert('Hata', errorMessage);
+            const msg = `Kayıt Başarısız: ${errorMessage} (${error.code || error.message})`;
+            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Hata', msg);
+            console.error('Firebase Auth Hatası:', error);
         } finally {
             setLoading(false);
         }

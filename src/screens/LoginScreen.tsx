@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,7 +18,8 @@ export default function LoginScreen({ navigation }: Props) {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
+            const msg = 'Lütfen tüm alanları doldurun.';
+            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Hata', msg);
             return;
         }
 
@@ -33,7 +34,8 @@ export default function LoginScreen({ navigation }: Props) {
             } else if (error.code === 'auth/invalid-email') {
                 errorMessage = 'Geçersiz e-posta adresi.';
             }
-            Alert.alert('Hata', errorMessage);
+            const msg = errorMessage;
+            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Hata', msg);
         } finally {
             setLoading(false);
         }

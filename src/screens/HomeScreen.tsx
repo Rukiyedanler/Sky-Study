@@ -15,7 +15,6 @@ export default function HomeScreen({ navigation }: Props) {
     const handleLogout = async () => {
         try {
             await signOut(auth);
-            // Çıkış yapıldığında AppNavigator AuthStack'e geri dönecek.
         } catch (error) {
             Alert.alert('Hata', 'Çıkış yapılırken bir sorun oluştu.');
         }
@@ -24,16 +23,6 @@ export default function HomeScreen({ navigation }: Props) {
     return (
         <View style={styles.container}>
             <Text style={styles.welcomeText}>Sky-Study Uçuş Merkezine Hoş Geldiniz</Text>
-            <Text style={styles.subtitle}>
-                Pilot: {auth.currentUser?.email || 'Bilinmeyen Kullanıcı'}
-            </Text>
-
-            <TouchableOpacity
-                style={styles.flightButton}
-                onPress={() => navigation.navigate('Pomodoro')}
-            >
-                <Text style={styles.flightButtonText}>Uçuşa (Pomodoro) Başla</Text>
-            </TouchableOpacity>
 
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                 <Text style={styles.logoutText}>Çıkış Yap</Text>
@@ -54,37 +43,24 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         textAlign: 'center',
-        marginBottom: 10,
-        color: '#333',
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#666',
         marginBottom: 40,
-    },
-    flightButton: {
-        backgroundColor: '#4caf50', // Yeşil / Güvenli Uçuş teması
-        paddingVertical: 15,
-        paddingHorizontal: 40,
-        borderRadius: 30,
-        marginBottom: 20,
-        elevation: 3, // Android shadow
-        shadowColor: '#000', // iOS shadow
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
-    },
-    flightButtonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
+        color: '#333',
     },
     logoutButton: {
         padding: 10,
+        backgroundColor: '#f44336',
+        borderRadius: 8,
+        minWidth: 120,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 3,
     },
     logoutText: {
-        color: '#d32f2f', // Kırmızı çıkış
+        color: '#fff',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: 'bold',
     },
 });

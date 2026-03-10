@@ -5,11 +5,10 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { View, ActivityIndicator } from 'react-native';
 
-// Import Screens (Placeholders for now)
+// Import Screens
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
-import PomodoroScreen from '../screens/PomodoroScreen';
 
 // Types for Navigation
 export type AuthStackParamList = {
@@ -19,7 +18,6 @@ export type AuthStackParamList = {
 
 export type MainStackParamList = {
     Home: undefined;
-    Pomodoro: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -35,7 +33,6 @@ const AuthNavigator = () => (
 const MainNavigator = () => (
     <MainStack.Navigator>
         <MainStack.Screen name="Home" component={HomeScreen} options={{ title: 'Sky Study' }} />
-        <MainStack.Screen name="Pomodoro" component={PomodoroScreen} options={{ title: 'Focus Flight' }} />
     </MainStack.Navigator>
 );
 

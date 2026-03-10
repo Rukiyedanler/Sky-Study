@@ -18,7 +18,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase Analytics ONLY for supported environments (like Web and bare React Native when supported, otherwise it crashes Expo Go).
+// Initialize Firebase Analytics ONLY for supported environments
 let analytics: any = null;
 if (typeof window !== 'undefined') {
   try {
