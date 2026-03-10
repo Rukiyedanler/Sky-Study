@@ -1,5 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    StyleSheet,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    KeyboardAvoidingView,
+    TouchableWithoutFeedback,
+    Keyboard
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,6 +31,8 @@ export default function RegisterScreen({ navigation }: Props) {
     const [loading, setLoading] = useState(false);
 
     const handleRegister = async () => {
+        Keyboard.dismiss();
+
         if (!email || !password || !confirmPassword) {
             const msg = 'Lütfen tüm alanları doldurun.';
             Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Hata', msg);
@@ -33,7 +48,6 @@ export default function RegisterScreen({ navigation }: Props) {
         setLoading(true);
         try {
             await createUserWithEmailAndPassword(auth, email, password);
-            // Başarılı kayıtta otomatik giriş yapılır, AppNavigator MainStack'e yönlendirir.
         } catch (error: any) {
             let errorMessage = 'Kayıt Başarısız';
             if (error.code === 'auth/email-already-in-use') {
@@ -52,55 +66,74 @@ export default function RegisterScreen({ navigation }: Props) {
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Pilot Ol</Text>
+        <SafeAreaView style={styles.safeArea}>
+            <KeyboardAvoidingView
+                style={styles.keyboardView}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View style={styles.container}>
+                        <Text style={styles.title}>Pilot Ol</Text>
 
-            <TextInput
-                style={styles.input}
-                placeholder="E-posta Adresi"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-            />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="E-posta Adresi"
+                            value={email}
+                            onChangeText={setEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            returnKeyType="next"
+                        />
 
-            <TextInput
-                style={styles.input}
-                placeholder="Şifre"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-            />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Şifre"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                            returnKeyType="next"
+                        />
 
-            <TextInput
-                style={styles.input}
-                placeholder="Şifreyi Onayla"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-            />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Şifreyi Onayla"
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                            secureTextEntry
+                            returnKeyType="done"
+                            onSubmitEditing={handleRegister}
+                        />
 
-            <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
-                {loading ? (
-                    <ActivityIndicator color="#fff" />
-                ) : (
-                    <Text style={styles.buttonText}>Kayıt Ol</Text>
-                )}
-            </TouchableOpacity>
+                        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading} activeOpacity={0.8}>
+                            {loading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.buttonText}>Kayıt Ol</Text>
+                            )}
+                        </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.linkButton}>
-                <Text style={styles.linkText}>Zaten hesabın var mı? Giriş Yap</Text>
-            </TouchableOpacity>
-        </View>
+                        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.linkButton} activeOpacity={0.6}>
+                            <Text style={styles.linkText}>Zaten hesabın var mı? Giriş Yap</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#ebf4f6', // Açık tema
+    },
+    keyboardView: {
+        flex: 1,
+    },
     container: {
         flex: 1,
         justifyContent: 'center',
-        padding: 20,
-        backgroundColor: '#ebf4f6', // Açık tema, gökyüzüne gönderme
+        padding: 24, // good spacing for mobile screens
     },
     title: {
         fontSize: 28,
@@ -111,18 +144,21 @@ const styles = StyleSheet.create({
     },
     input: {
         backgroundColor: '#fff',
-        padding: 15,
-        borderRadius: 8,
-        marginBottom: 15,
+        padding: 15, // Creates a 44px+ touch target height
+        borderRadius: 12,
+        marginBottom: 16,
         borderWidth: 1,
         borderColor: '#b2dfdb',
+        fontSize: 16,
     },
     button: {
-        backgroundColor: '#ff9800', // Uçuş temasına uygun dikkat çekici renk
-        padding: 15,
-        borderRadius: 8,
+        backgroundColor: '#ff9800', // Dikkat çekici renk
+        padding: 16,
+        borderRadius: 12,
         alignItems: 'center',
         marginTop: 10,
+        minHeight: 50, // minimum height constraint
+        justifyContent: 'center',
     },
     buttonText: {
         color: '#fff',
@@ -132,9 +168,10 @@ const styles = StyleSheet.create({
     linkButton: {
         marginTop: 20,
         alignItems: 'center',
+        padding: 10, // Added padding to expand touch target
     },
     linkText: {
         color: '#007bff',
-        fontSize: 14,
+        fontSize: 15,
     },
 });

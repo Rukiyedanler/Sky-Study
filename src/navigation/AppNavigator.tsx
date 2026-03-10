@@ -24,14 +24,27 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainStack = createNativeStackNavigator<MainStackParamList>();
 
 const AuthNavigator = () => (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+    <AuthStack.Navigator 
+    screenOptions={{ 
+      headerShown: false,
+      animation: 'slide_from_right',
+      gestureEnabled: true,
+      gestureDirection: 'horizontal'
+    }}
+  >
         <AuthStack.Screen name="Login" component={LoginScreen} />
         <AuthStack.Screen name="Register" component={RegisterScreen} />
     </AuthStack.Navigator>
 );
 
 const MainNavigator = () => (
-    <MainStack.Navigator>
+    <MainStack.Navigator
+    screenOptions={{ 
+      animation: 'slide_from_right',
+      gestureEnabled: true,
+      gestureDirection: 'horizontal'
+    }}
+  >
         <MainStack.Screen name="Home" component={HomeScreen} options={{ title: 'Sky Study' }} />
     </MainStack.Navigator>
 );
