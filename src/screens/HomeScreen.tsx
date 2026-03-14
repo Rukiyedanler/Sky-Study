@@ -5,6 +5,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
+import { theme } from '../theme';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
 
@@ -24,7 +25,10 @@ export default function HomeScreen({ }: Props) {
     return (
         <SafeAreaView style={styles.safeArea}>
             <View style={styles.container}>
-                <Text style={styles.welcomeText}>Sky-Study Uçuş Merkezine Hoş Geldiniz</Text>
+                <View style={styles.content}>
+                    <Text style={styles.welcomeText}>Sky Study</Text>
+                    <Text style={styles.subtitle}>Uçuş Merkezine Hoş Geldiniz</Text>
+                </View>
 
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
                     <Text style={styles.logoutText}>Çıkış Yap</Text>
@@ -37,40 +41,47 @@ export default function HomeScreen({ }: Props) {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.background,
     },
     container: {
         flex: 1,
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 24, // increased padding for mobile usage
+        padding: theme.spacing.xl,
+        paddingTop: theme.spacing.xxl,
+        paddingBottom: theme.spacing.xxl * 2,
+    },
+    content: {
+        alignItems: 'center',
+        marginTop: theme.spacing.xl,
     },
     welcomeText: {
-        fontSize: 26, // Increased font size slightly
-        fontWeight: 'bold',
+        ...theme.typography.h1,
+        color: theme.colors.text,
         textAlign: 'center',
-        marginBottom: 40,
-        color: '#333',
-        lineHeight: 34,
+        marginBottom: theme.spacing.s,
+    },
+    subtitle: {
+        ...theme.typography.body,
+        color: theme.colors.textSecondary,
+        textAlign: 'center',
     },
     logoutButton: {
-        paddingVertical: 14,
-        paddingHorizontal: 30, // Ensured minimum width and 44px+ height constraint
-        backgroundColor: '#f44336',
-        borderRadius: 30, // more prominent pill shape for mobile
-        minWidth: 160,
-        minHeight: 50,
+        width: '100%',
+        height: 56,
+        backgroundColor: theme.colors.error,
+        borderRadius: theme.borderRadius.l,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
+        shadowColor: theme.colors.error,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 4, // Android shadow
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
     },
     logoutText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
+        ...theme.typography.body,
+        color: theme.colors.surface,
+        fontWeight: '600',
     },
 });
