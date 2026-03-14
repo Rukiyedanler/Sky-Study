@@ -18,8 +18,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AppNavigator';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { theme } from '../theme';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -32,20 +31,24 @@ export default function RegisterScreen({ navigation }: Props) {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [isPasswordVisible, setPasswordVisible] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
     const handleRegister = async () => {
         Keyboard.dismiss();
+        setErrorMsg('');
 
         if (!email || !password || !confirmPassword) {
-            const msg = 'Lütfen uçuş biletiniz için tüm alanları doldurun.';
-            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Eksik Bilgi', msg);
+            setErrorMsg('Lütfen tüm alanları doldurun.');
             return;
         }
 
         if (password !== confirmPassword) {
-            const msg = 'Rezerve edilen şifreler eşleşmiyor.';
-            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Güvenlik İhlali', msg);
+            setErrorMsg('Şifreler eşleşmiyor.');
+            return;
+        }
+
+        if (password.length < 6) {
+            setErrorMsg('Şifre en az 6 karakter olmalıdır.');
             return;
         }
 
@@ -53,17 +56,15 @@ export default function RegisterScreen({ navigation }: Props) {
         try {
             await createUserWithEmailAndPassword(auth, email, password);
         } catch (error: any) {
-            let errorMessage = 'Kayıt Başarısız';
+            let errorMessage = 'Kayıt Başarısız.';
             if (error.code === 'auth/email-already-in-use') {
-                errorMessage = 'Bu pilot adresi zaten kayıtlı.';
+                errorMessage = 'Bu e-posta adresi zaten kullanımda.';
             } else if (error.code === 'auth/invalid-email') {
-                errorMessage = 'Geçersiz rota (e-posta adresi hatalı).';
+                errorMessage = 'Geçersiz e-posta adresi formatı.';
             } else if (error.code === 'auth/weak-password') {
-                errorMessage = 'Şifre çok zayıf (en az 6 karakter olmalı).';
+                errorMessage = 'Şifre çok zayıf.';
             }
-            const msg = errorMessage;
-            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Kayıt Reddedildi', msg);
-            console.error('Firebase Auth Hatası:', error);
+            setErrorMsg(`Hata: ${errorMessage}`);
         } finally {
             setLoading(false);
         }
@@ -71,105 +72,82 @@ export default function RegisterScreen({ navigation }: Props) {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FAFAF9" />
-            <LinearGradient
-                colors={['#FAFAF9', '#f3f4f6']}
-                style={styles.gradientBackground}
+            <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
+            <KeyboardAvoidingView
+                style={styles.keyboardView}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
-                <KeyboardAvoidingView
-                    style={styles.keyboardView}
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                >
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                        <View style={styles.container}>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View style={styles.container}>
 
-                            <View style={styles.header}>
-                                <Ionicons name="compass" size={60} color="#93C5FD" style={styles.logoIcon} />
-                                <Text style={styles.title}>Pilot Ol</Text>
-                                <Text style={styles.subtitle}>Sky Study Ekibine Katıl</Text>
-                            </View>
-
-                            <View style={styles.formContainer}>
-
-                                {/* Email Input */}
-                                <View style={styles.inputGroup}>
-                                    <Ionicons name="mail-outline" size={20} color="#C084FC" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Pilot E-posta Adresi"
-                                        placeholderTextColor="rgba(30, 58, 138, 0.4)"
-                                        value={email}
-                                        onChangeText={setEmail}
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        returnKeyType="next"
-                                    />
-                                </View>
-
-                                {/* Password Input */}
-                                <View style={styles.inputGroup}>
-                                    <Ionicons name="lock-closed-outline" size={20} color="#C084FC" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Erişim Şifresi"
-                                        placeholderTextColor="rgba(30, 58, 138, 0.4)"
-                                        value={password}
-                                        onChangeText={setPassword}
-                                        secureTextEntry={!isPasswordVisible}
-                                        returnKeyType="next"
-                                    />
-                                    <TouchableOpacity onPress={() => setPasswordVisible(!isPasswordVisible)} style={styles.eyeIconBtn}>
-                                        <Ionicons name={isPasswordVisible ? "eye-outline" : "eye-off-outline"} size={20} color="#C084FC" />
-                                    </TouchableOpacity>
-                                </View>
-
-                                {/* Confirm Password Input */}
-                                <View style={styles.inputGroup}>
-                                    <Ionicons name="lock-closed-outline" size={20} color="#C084FC" style={styles.inputIcon} />
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Şifreyi Onayla"
-                                        placeholderTextColor="rgba(30, 58, 138, 0.4)"
-                                        value={confirmPassword}
-                                        onChangeText={setConfirmPassword}
-                                        secureTextEntry={!isPasswordVisible}
-                                        returnKeyType="done"
-                                        onSubmitEditing={handleRegister}
-                                    />
-                                </View>
-
-                                <TouchableOpacity
-                                    style={styles.registerButton}
-                                    onPress={handleRegister}
-                                    disabled={loading}
-                                    activeOpacity={0.8}
-                                >
-                                    <LinearGradient
-                                        colors={['#93C5FD', '#C084FC']}
-                                        style={styles.buttonGradient}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                    >
-                                        {loading ? (
-                                            <ActivityIndicator color="#fff" />
-                                        ) : (
-                                            <Text style={styles.buttonText}>Biniş Kartını Oluştur</Text>
-                                        )}
-                                    </LinearGradient>
-                                </TouchableOpacity>
-
-                                <View style={styles.linkContainer}>
-                                    <Text style={styles.questionText}>Pilot Ehliyetin var mı? </Text>
-                                    <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.6}>
-                                        <Text style={styles.linkText}>Giriş Yap</Text>
-                                    </TouchableOpacity>
-                                </View>
-
-                            </View>
+                        <View style={styles.header}>
+                            <Text style={styles.title}>Yeni Hesap</Text>
+                            <Text style={styles.subtitle}>Sky Study'ye katılın</Text>
                         </View>
-                    </TouchableWithoutFeedback>
-                </KeyboardAvoidingView>
-            </LinearGradient>
+
+                        <View style={styles.formContainer}>
+                            {errorMsg ? (
+                                <View style={styles.errorContainer}>
+                                    <Text style={styles.errorText}>{errorMsg}</Text>
+                                </View>
+                            ) : null}
+
+                            <TextInput
+                                style={styles.input}
+                                placeholder="E-posta Adresi"
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                returnKeyType="next"
+                            />
+
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Şifre"
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry
+                                returnKeyType="next"
+                            />
+
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Şifreyi Onayla"
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={confirmPassword}
+                                onChangeText={setConfirmPassword}
+                                secureTextEntry
+                                returnKeyType="done"
+                                onSubmitEditing={handleRegister}
+                            />
+
+                            <TouchableOpacity
+                                style={styles.button}
+                                onPress={handleRegister}
+                                disabled={loading}
+                                activeOpacity={0.8}
+                            >
+                                {loading ? (
+                                    <ActivityIndicator color={theme.colors.surface} />
+                                ) : (
+                                    <Text style={styles.buttonText}>Kayıt Ol</Text>
+                                )}
+                            </TouchableOpacity>
+
+                            <View style={styles.footer}>
+                                <Text style={styles.footerText}>Zaten hesabınız var mı? </Text>
+                                <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.6} style={styles.linkTouch}>
+                                    <Text style={styles.linkText}>Giriş Yap</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                        </View>
+                    </View>
+                </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -177,10 +155,7 @@ export default function RegisterScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#FAFAF9',
-    },
-    gradientBackground: {
-        flex: 1,
+        backgroundColor: theme.colors.background,
     },
     keyboardView: {
         flex: 1,
@@ -188,95 +163,81 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
-        padding: 24,
+        padding: theme.spacing.xl,
     },
     header: {
-        alignItems: 'center',
-        marginBottom: 40,
-    },
-    logoIcon: {
-        marginBottom: 5,
+        marginBottom: theme.spacing.xxl,
     },
     title: {
-        fontSize: 34,
-        fontWeight: '800',
-        color: '#1E3A8A',
-        letterSpacing: 1.5,
+        ...theme.typography.h1,
+        color: theme.colors.text,
+        marginBottom: theme.spacing.s,
     },
     subtitle: {
-        fontSize: 16,
-        color: '#1E3A8A',
-        opacity: 0.7,
-        marginTop: 8,
-        fontWeight: '500',
+        ...theme.typography.body,
+        color: theme.colors.textSecondary,
     },
     formContainer: {
         width: '100%',
     },
-    inputGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 14,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#93C5FD',
-        paddingHorizontal: 15,
-        height: 58,
-        shadowColor: '#93C5FD',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
+    errorContainer: {
+        backgroundColor: theme.colors.error + '15',
+        padding: theme.spacing.m,
+        borderRadius: theme.borderRadius.m,
+        marginBottom: theme.spacing.l,
+        borderLeftWidth: 4,
+        borderLeftColor: theme.colors.error,
     },
-    inputIcon: {
-        marginRight: 10,
+    errorText: {
+        ...theme.typography.caption,
+        color: theme.colors.error,
+        fontWeight: '600',
     },
     input: {
-        flex: 1,
-        color: '#1E3A8A',
-        fontSize: 16,
-        height: '100%',
+        backgroundColor: theme.colors.surface,
+        borderRadius: theme.borderRadius.l,
+        marginBottom: theme.spacing.m,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        paddingHorizontal: theme.spacing.l,
+        height: 56,
+        ...theme.typography.body,
+        color: theme.colors.text,
     },
-    eyeIconBtn: {
-        padding: 10,
-    },
-    registerButton: {
-        marginTop: 10,
-        borderRadius: 14,
-        shadowColor: '#C084FC',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
-        overflow: 'hidden',
-    },
-    buttonGradient: {
-        height: 58,
+    button: {
+        backgroundColor: theme.colors.primary,
+        height: 56,
+        borderRadius: theme.borderRadius.l,
         justifyContent: 'center',
         alignItems: 'center',
+        marginTop: theme.spacing.s,
+        shadowColor: theme.colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
     },
     buttonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
+        ...theme.typography.body,
+        color: theme.colors.surface,
+        fontWeight: '600',
     },
-    linkContainer: {
+    footer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginTop: 30,
+        marginTop: theme.spacing.xl,
         alignItems: 'center',
-        padding: 10,
     },
-    questionText: {
-        color: '#1E3A8A',
-        opacity: 0.8,
-        fontSize: 15,
+    footerText: {
+        ...theme.typography.body,
+        color: theme.colors.textSecondary,
+    },
+    linkTouch: {
+        padding: theme.spacing.s,
     },
     linkText: {
-        color: '#6EE7B7', // Nane yeşili
-        fontSize: 16,
+        ...theme.typography.body,
+        color: theme.colors.primary,
         fontWeight: 'bold',
     },
 });
