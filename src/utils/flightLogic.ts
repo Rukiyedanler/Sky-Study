@@ -1,81 +1,30 @@
-export interface City {
-  id: string;
-  name: string;
-  code: string;
-}
+export { CITIES } from '../data/cities';
+export type { City } from '../data/cities';
+import { CITIES } from '../data/cities';
 
-// 40 Adet Dünyaca Ünlü Şehir (Daha Zengin Bir Havuz İçin)
-export const CITIES: City[] = [
-  { id: '1', name: 'İstanbul', code: 'IST' },
-  { id: '2', name: 'Tokyo', code: 'HND' },
-  { id: '3', name: 'New York', code: 'JFK' },
-  { id: '4', name: 'Londra', code: 'LHR' },
-  { id: '5', name: 'Paris', code: 'CDG' },
-  { id: '6', name: 'Berlin', code: 'BER' },
-  { id: '7', name: 'Dubai', code: 'DXB' },
-  { id: '8', name: 'Singapur', code: 'SIN' },
-  { id: '9', name: 'Roma', code: 'FCO' },
-  { id: '10', name: 'Los Angeles', code: 'LAX' },
-  { id: '11', name: 'Seul', code: 'ICN' },
-  { id: '12', name: 'Amsterdam', code: 'AMS' },
-  { id: '13', name: 'Barselona', code: 'BCN' },
-  { id: '14', name: 'Madrid', code: 'MAD' },
-  { id: '15', name: 'Moskova', code: 'SVO' },
-  { id: '16', name: 'Pekin', code: 'PEK' },
-  { id: '17', name: 'Sidney', code: 'SYD' },
-  { id: '18', name: 'Toronto', code: 'YYZ' },
-  { id: '19', name: 'Sao Paulo', code: 'GRU' },
-  { id: '20', name: 'Kahire', code: 'CAI' },
-  { id: '21', name: 'Delhi', code: 'DEL' },
-  { id: '22', name: 'Bangkok', code: 'BKK' },
-  { id: '23', name: 'Kuala Lumpur', code: 'KUL' },
-  { id: '24', name: 'Hong Kong', code: 'HKG' },
-  { id: '25', name: 'Viyana', code: 'VIE' },
-  { id: '26', name: 'Zürih', code: 'ZRH' },
-  { id: '27', name: 'Atina', code: 'ATH' },
-  { id: '28', name: 'Lizbon', code: 'LIS' },
-  { id: '29', name: 'Stockholm', code: 'ARN' },
-  { id: '30', name: 'Oslo', code: 'OSL' },
-  { id: '31', name: 'Kopenhag', code: 'CPH' },
-  { id: '32', name: 'Helsinki', code: 'HEL' },
-  { id: '33', name: 'Dublin', code: 'DUB' },
-  { id: '34', name: 'Brüksel', code: 'BRU' },
-  { id: '35', name: 'Prag', code: 'PRG' },
-  { id: '36', name: 'Varşova', code: 'WAW' },
-  { id: '37', name: 'Budapeşte', code: 'BUD' },
-  { id: '38', name: 'Miami', code: 'MIA' },
-  { id: '39', name: 'Chicago', code: 'ORD' },
-  { id: '40', name: 'San Francisco', code: 'SFO' },
-];
+// Gerçekçi Uçuş Süreleri Matrisi (Dakika Cinsinden)
+// 1: IST (İstanbul), 2: ESB (Ankara), 3: ADB (İzmir), 4: CDG (Paris), 5: LHR (Londra)
+// 6: HND (Tokyo), 7: JFK (New York), 8: BER (Berlin), 9: FCO (Roma), 10: AMS (Amsterdam)
+const REAL_FLIGHT_DURATIONS: Record<string, Record<string, number>> = {
+  '1': { '2': 60, '3': 70, '4': 225, '5': 250, '6': 660, '7': 650, '8': 170, '9': 150, '10': 210 }, // İstanbul'dan...
+  '2': { '3': 75, '4': 240, '5': 260, '6': 670, '7': 680, '8': 185, '9': 165, '10': 225 }, // Ankara'dan...
+  '3': { '4': 210, '5': 235, '6': 685, '7': 650, '8': 165, '9': 145, '10': 200 }, // İzmir'den...
+  '4': { '5': 75, '6': 800, '7': 480, '8': 105, '9': 125, '10': 75 }, // Paris'ten...
+  '5': { '6': 820, '7': 420, '8': 110, '9': 150, '10': 65 }, // Londra'dan...
+  '6': { '7': 840, '8': 850, '9': 870, '10': 840 }, // Tokyo'dan...
+  '7': { '8': 490, '9': 520, '10': 430 }, // New York'tan...
+  '8': { '9': 130, '10': 80 }, // Berlin'den...
+  '9': { '10': 150 }, // Roma'dan Amsterdam'a 2.5 saat
+};
 
-// Belirli iki şehir arasında her zaman aynı süreyi veren pseudo-random bir hesaplama
 export const getFlightDuration = (originId: string, destId: string): number => {
   if (originId === destId) return 0;
   
-  const id1 = parseInt(originId);
-  const id2 = parseInt(destId);
+  // Kombinasyonun Matrix'te bulunabilmesi için küçük ID olanı başa alıyoruz.
+  const minId = Math.min(parseInt(originId), parseInt(destId)).toString();
+  const maxId = Math.max(parseInt(originId), parseInt(destId)).toString();
   
-  // Kombinasyonun sıradan bağımsız aynı sonucu vermesi için min/max alıyoruz
-  const minId = Math.min(id1, id2);
-  const maxId = Math.max(id1, id2);
-  
-  // Hash algoritması
-  const hash = (minId * 73) + (maxId * 37) + (minId * maxId * 11);
-  
-  // Önemli: Pomodoro kullanıcıları genelde 20-60 dk seçer. Bu yüzden sürelerin
-  // büyük bir kısmını (örneğin %70'ini) 20 - 75 dakika arasına yığacak bir normalizasyon yapıyoruz.
-  const baseRandom = hash % 100; // 0-99 arası
-  
-  if (baseRandom < 60) {
-     // %60 ihtimalle kısa/orta odaklanma menzili (20 - 65 dk)
-     return 20 + (hash % 46); 
-  } else if (baseRandom < 85) {
-     // %25 ihtimalle standart/uzun odaklanma menzili (65 - 100 dk)
-     return 65 + (hash % 36);
-  } else {
-     // %15 ihtimalle ekstrem menzil (100 - 180 dk)
-     return 100 + (hash % 81);
-  }
+  return REAL_FLIGHT_DURATIONS[minId]?.[maxId] || 120; // Veri yoksa standart 2 saat dön
 };
 
 export const filterDestinations = (originId: string, targetDuration: number) => {
