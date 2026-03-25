@@ -48,7 +48,7 @@ export const theme = {
         },
     },
     images: {
-        // Yıldızlı Gökyüzü (Kullanıcı İsteği: Dağsız, sadece gökyüzü)
-        background: 'https://images.unsplash.com/photo-1464802686167-b939a6910659?ixlib=rb-1.2.1&auto=format&fit=crop&w=1080&q=100',
+        // Kullanıcı İsteği: Daha iç açıcı, eşsiz bucaksız huzurlu ve sonsuzluk hissi veren gökyüzü
+        background: 'https://images.unsplash.com/photo-1513002749550-c59d786b8e6c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1080&q=100',
     }
 };

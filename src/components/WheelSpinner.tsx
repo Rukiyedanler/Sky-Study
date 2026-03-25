@@ -17,17 +17,14 @@ const { width } = Dimensions.get('window');
 const WHEEL_SIZE = width * 0.32; 
 const RADIUS = WHEEL_SIZE / 2;
 
-// Yumuşak renk paletine uygun ekstra renkler (Çark dilimleri için)
+// Çarkı ön plana çıkarmak için opaklıkları arttırılmış, parlak camgöbeği ve beyaz tonlar
 const SLICE_COLORS = [
-  '#3B82F6', // Mavi
-  '#6366F1', // İndigo
-  '#8B5CF6', // Ekstra Mor
-  '#10B981', // Zümrüt Yeşili
-  '#0EA5E9', // Gök Mavisi
-  '#3F6212', // Koyu Orman Yeşili
-  '#4338CA', // Koyu İndigo
-  '#1E40AF', // Koyu Mavi
-  '#047857', // Koyu Zümrüt
+  'rgba(255, 255, 255, 0.55)', // Parlak Beyaz Cam
+  'rgba(59, 130, 246, 0.45)', // Parlak Mavi
+  'rgba(167, 139, 250, 0.50)', // Parlak Mor
+  'rgba(14, 165, 233, 0.55)', // Parlak Camgöbeği
+  'rgba(255, 255, 255, 0.40)', // Klasik Beyaz Cam
+  'rgba(99, 102, 241, 0.45)', // Parlak İndigo
 ];
 
 // SVG dilim çizim fonksiyonu
@@ -110,8 +107,8 @@ export const WheelSpinner: React.FC<WheelSpinnerProps> = ({ title, subtitle, poo
                     <Path
                       d={createPieSlice(index, displayPool.length, RADIUS)}
                       fill={SLICE_COLORS[index % SLICE_COLORS.length]}
-                      stroke={theme.colors.background}
-                      strokeWidth={2}
+                      stroke="rgba(255, 255, 255, 0.7)" // Çizgileri Daha belirgin beyaz yap
+                      strokeWidth={2.5}
                     />
                     {/* Metin (Sadece çok fazla şehir yoksa kodunu yaz, yoksa sığmaz) */}
                     {displayPool.length <= 12 && (
@@ -168,7 +165,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.background, // Deep dark now
+    backgroundColor: 'transparent', // Let the ImageBackground from HomeScreen shine through
     padding: theme.spacing.xl,
   },
   title: {
@@ -190,6 +187,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.xxl,
     position: 'relative',
+    // Arkaplandan belirgin seviyede ayırmak için dairesel parlama (halo) efekti
+    backgroundColor: 'rgba(255, 255, 255, 0.1)', // Hafif buzlu cam tabanı
+    borderRadius: WHEEL_SIZE / 2, // Tam daire
+    shadowColor: '#FFF', // Beyaz parlama
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25, // Parlama yoğunluğu
+    shadowRadius: 30, // Parlamanın yayılma alanı
+    elevation: 20, // Android için
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)', // İnce zarif dış çerçevesi
   },
   pointer: {
     position: 'absolute',
