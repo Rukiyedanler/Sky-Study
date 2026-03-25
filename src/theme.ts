@@ -1,13 +1,13 @@
 export const theme = {
     colors: {
-        primary: '#3B82F6', // Mavi vurgu (Butonlar ve aktif öğeler)
-        secondary: '#6366F1', // İndigo / Mor vurgu
-        accent: '#8B5CF6', // Ekstra vurgu
-        background: '#0F172A', // Çok derin lacivert/siyah (Uzay/Gece hissi)
-        surface: 'rgba(30, 41, 59, 0.7)', // Yarı şeffaf koyu gri (Glassmorphism için)
-        text: '#F8FAFC', // Saf tama yakın beyaz (Net okunabilirlik)
-        textSecondary: '#94A3B8', // Açık gri (Alt metinler, ikonlar)
-        border: 'rgba(255, 255, 255, 0.1)', // İnce, şeffaf sınır çizgileri
+        primary: '#3B82F6', // Canlı orta mavi (Faz 2)
+        secondary: '#A7F3D0', // Pastel Nane Yeşili (Faz 2)
+        accent: '#8B5CF6', 
+        background: '#0F172A', 
+        surface: 'rgba(31, 41, 55, 0.8)', // Koyu füme gri (Faz 2)
+        text: '#FFFFFF', // Tam beyaz (Faz 2)
+        textSecondary: '#D1D5DB', // Açık gri (Faz 2)
+        border: 'rgba(255, 255, 255, 0.15)',
         error: '#EF4444', 
         success: '#10B981', 
     },
