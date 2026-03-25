@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { theme } from '../theme';
 
 interface TicketProps {
@@ -22,7 +23,7 @@ export const Ticket: React.FC<TicketProps> = ({
   onRefund 
 }) => {
   return (
-    <View style={styles.card}>
+    <BlurView intensity={50} tint="dark" style={styles.card}>
       <View style={styles.header}>
         <Text style={styles.title}>BİNİŞ KARTI</Text>
       </View>
@@ -60,22 +61,25 @@ export const Ticket: React.FC<TicketProps> = ({
           <Text style={styles.refundText}>İade Et</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </BlurView>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.surface, // Bu rgba rengi BlurView'a extra karartma verir
     borderRadius: theme.borderRadius.xl,
     padding: theme.spacing.m,
-    shadowColor: theme.colors.secondary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 8,
     marginVertical: theme.spacing.l,
     width: '100%',
+    overflow: 'hidden', // BlurView'un köşelerinin yuvarlak olması için şart
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   header: {
     borderBottomWidth: 1,
@@ -144,24 +148,24 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.s,
   },
   confirmBtn: {
-    backgroundColor: theme.colors.secondary,
+    backgroundColor: theme.colors.primary, // Canlı Mavi
     paddingVertical: 14,
-    borderRadius: theme.borderRadius.l,
+    borderRadius: theme.borderRadius.round, // Pill-shaped
     alignItems: 'center',
   },
   confirmText: {
-    color: theme.colors.surface,
+    color: '#FFF',
     fontWeight: 'bold',
     fontSize: 16,
   },
   refundBtn: {
-    backgroundColor: theme.colors.accent,
+    backgroundColor: theme.colors.secondary, // Pastel Nane Yeşili
     paddingVertical: 14,
-    borderRadius: theme.borderRadius.l,
+    borderRadius: theme.borderRadius.round, // Pill-shaped
     alignItems: 'center',
   },
   refundText: {
-    color: theme.colors.text, // Koyu lacivert text Nane üzerinde daha iyi durur
+    color: '#0F172A', // Nane yeşili üzerinde okunabilmesi için koyu metin
     fontWeight: 'bold',
     fontSize: 16,
   },
