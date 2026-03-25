@@ -66,23 +66,34 @@ export const WheelSpinner: React.FC<WheelSpinnerProps> = ({ title, subtitle, poo
     setIsSpinning(true);
     spinValue.setValue(0);
 
+    // Rastgele bir öğe seç (ÖNCE SEÇİM YAPILIR, ANİMASYON ONA GÖRE HESAPLANIR)
+    const randomIndex = Math.floor(Math.random() * displayPool.length);
+    const chosen = displayPool[randomIndex];
+
+    // İbrenin (Pointer) tam olarak seçilen dilimin ORTASINA denk gelmesi için gereken rotasyonu hesapla
+    const anglePerSlice = 360 / displayPool.length;
+    
+    // Çark çizimi "-90" derece rotate ile başladığı için 0. dilim Tepededir (Saat 12 yönü)
+    const centerOffset = randomIndex * anglePerSlice + (anglePerSlice / 2);
+    
+    // Çarkı saat yönünde tam 5 tur (1800 derece) + hedeflenen dilimi tepeye getirecek kadar döndür
+    // İbrenin dilimin ortasına denk gelmesini istiyorsak, o merkezi 0 açısına taşımak için (360 - merkez) dönmeliyiz.
+    const targetDegree = 1800 + (360 - centerOffset);
+
     Animated.timing(spinValue, {
-      toValue: 1,
+      toValue: targetDegree,
       duration: 4000, // 4 saniye
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
       setIsSpinning(false);
-      // Rastgele bir öğe seç
-      const randomIndex = Math.floor(Math.random() * pool.length);
-      const chosen = pool[randomIndex];
       onSelected(chosen);
     });
   };
 
   const spinAnimation = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '1800deg'], // 5 Tur
+    inputRange: [0, 3600], // Sadece güvenli ve esnek bir aralık tanımlıyoruz
+    outputRange: ['0deg', '3600deg'], 
   });
 
   return (
