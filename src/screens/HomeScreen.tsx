@@ -14,6 +14,7 @@ import {
   Alert,
   ImageBackground
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
@@ -40,33 +41,34 @@ export default function HomeScreen() {
   // Modals
   const [isRefundModalVisible, setRefundModalVisible] = useState(false);
 
-  const startPlanning = () => {
+  const showTicket = () => {
     Keyboard.dismiss();
     const durationNum = parseInt(targetDuration) || 0;
     if (durationNum < 15) {
       Alert.alert('Geçersiz Süre', 'Hedef süre en az 15 dakika olmalıdır.');
       return;
     }
-    setPhase(1); // Move to Origin Selection Phase
+    if (!originCity || !activeFlight) {
+      Alert.alert('Rotalar Eksik', 'Lütfen kalkış ve varış şehirlerinizi şans çarkı ile belirleyin.');
+      return;
+    }
+    setPhase(3); // Show ticket
   };
 
   const handleOriginSelected = (selectedCity: City) => {
     setOriginCity(selectedCity);
     const durationNum = parseInt(targetDuration) || 0;
     
-    // Calculate possible destinations from this random origin
     const dests = filterDestinations(selectedCity.id, durationNum);
     
-    // Slight delay to let wheel animation finish
     setTimeout(() => {
         if (dests.length === 0) {
-            Alert.alert('Uyarı', `Seçilen ${selectedCity.name} noktasından ${durationNum} dakikalık uçuş bulamadık. Yeni bir kalkış noktası için çarkı tekrar çevir.`);
-            // Remain in phase 1 so they can spin again
+            Alert.alert('Uyarı', `Seçilen ${selectedCity.name} noktasından ${durationNum} dakikalık uçuş bulamadık. Lütfen süreyi değiştirin veya tekrar çevirin.`);
         } else {
             setAvailableDests(dests);
-            setPhase(2); // Move to Destination Phase
+            setPhase(0); // Return to planning card
         }
-    }, 500);
+    }, 1500); // Let user see the wheel result for 1.5s
   };
 
   const handleDestinationSelected = (result: any) => {
@@ -79,8 +81,8 @@ export default function HomeScreen() {
       });
       
       setTimeout(() => {
-         setPhase(3); // Move to Ticket Phase
-      }, 500);
+         setPhase(0); // Return to planning card
+      }, 1500); // Let user see the wheel result for 1.5s
     }
   };
 
@@ -115,29 +117,54 @@ export default function HomeScreen() {
               </View>
 
               {phase === 0 && (
-                <View style={styles.planningCard}>
-                  <Text style={styles.sectionTitle}>Uçuş Süresi</Text>
-                  <Text style={styles.hintText}>Önce ne kadar süre odaklanmak istediğinizi belirleyin. Geri kalanı kaderinize kalmış!</Text>
+                <BlurView intensity={50} tint="dark" style={styles.planningCard}>
+                  <Text style={styles.sectionTitle}>Uçuş Planı</Text>
+                  <Text style={styles.hintText}>Süreyi belirle, rotaları şansa bırak!</Text>
 
                   <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Hedeflenen Odaklanma Süresi</Text>
                     <TextInput
                       style={styles.textInput}
                       keyboardType="numeric"
                       value={targetDuration}
                       onChangeText={setTargetDuration}
-                      placeholder="Süre girin (Örn: 45)"
+                      placeholder="Süre (DK)"
                       placeholderTextColor="rgba(255,255,255,0.4)"
                     />
                   </View>
 
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Kalkış Şehri</Text>
+                    <TouchableOpacity style={styles.selectorBtn} onPress={() => setPhase(1)}>
+                       <Text style={originCity ? styles.selectorValue : styles.selectorPlaceholder}>
+                         {originCity ? originCity.name : "Şans çarkını çevir..."}
+                       </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Varış Şehri</Text>
+                    <TouchableOpacity 
+                       style={[styles.selectorBtn, !originCity && { opacity: 0.5 }]} 
+                       onPress={() => {
+                          if(!originCity) Alert.alert('Hata', 'Önce kalkış noktasını belirleyin.');
+                          else setPhase(2);
+                       }}
+                    >
+                       <Text style={activeFlight ? styles.selectorValue : styles.selectorPlaceholder}>
+                         {activeFlight ? activeFlight.dest.name : "Rastgele seç..."}
+                       </Text>
+                    </TouchableOpacity>
+                  </View>
+
                   <TouchableOpacity 
                     style={styles.planBtn} 
-                    onPress={startPlanning}
+                    onPress={showTicket}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.planBtnText}>Şans Çarklarını Başlat</Text>
+                    <Text style={styles.planBtnText}>Yolculuğu Planla</Text>
                   </TouchableOpacity>
-                </View>
+                </BlurView>
               )}
 
               {phase === 3 && activeFlight && (
@@ -145,9 +172,7 @@ export default function HomeScreen() {
                     <Ticket
                       passengerName={user?.email?.split('@')[0] || 'Pilot'}
                       originName={activeFlight.origin.name}
-                      originCode={activeFlight.origin.code}
                       destName={activeFlight.dest.name}
-                      destCode={activeFlight.dest.code}
                       duration={activeFlight.duration}
                       xp={activeFlight.xp}
                       onConfirm={() => {
@@ -202,26 +227,26 @@ export default function HomeScreen() {
                 onRequestClose={resetFlow}
               >
                 <View style={styles.modalOverlay}>
-                  <View style={styles.modalContent}>
+                  <BlurView intensity={50} tint="dark" style={styles.modalContent}>
                     <Text style={styles.modalText}>
-                      Uçuş rotasını değiştirmek için bileti iptal etmek istiyor musunuz?
+                      Uçuş süresini değiştirmek için bileti iptal etmek istiyor musunuz?
                     </Text>
                     <View style={styles.modalActions}>
                       <TouchableOpacity 
-                        style={[styles.modalBtn, { backgroundColor: theme.colors.accent }]} 
+                        style={[styles.modalBtn, { backgroundColor: theme.colors.secondary }]} 
                         onPress={resetFlow}
                       >
-                        <Text style={[styles.modalBtnText, { color: theme.colors.text }]}>Evet, İade Et</Text>
+                        <Text style={[styles.modalBtnText, { color: '#0F172A' }]}>Evet, İade Et</Text>
                       </TouchableOpacity>
                       
                       <TouchableOpacity 
-                        style={[styles.modalBtn, { backgroundColor: theme.colors.secondary }]} 
+                        style={[styles.modalBtn, { backgroundColor: theme.colors.primary }]} 
                         onPress={() => setRefundModalVisible(false)}
                       >
                         <Text style={styles.modalBtnText}>Hayır, Devam</Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
+                  </BlurView>
                 </View>
               </Modal>
 
@@ -282,13 +307,13 @@ const styles = StyleSheet.create({
   },
   planningCard: {
     width: '100%',
-    backgroundColor: theme.colors.surface, // This is now rgba(30, 41, 59, 0.7)
+    backgroundColor: theme.colors.surface, // BlurView tint
     borderRadius: theme.borderRadius.xl,
     padding: theme.spacing.xl,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    marginTop: theme.spacing.xl,
-    alignItems: 'center'
+    marginTop: theme.spacing.s,
+    overflow: 'hidden', // Forces BlurView to respect border radius
   },
   sectionTitle: {
     ...theme.typography.h1,
@@ -304,19 +329,42 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     width: '100%',
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.l,
+  },
+  label: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.s,
+    fontWeight: 'bold',
   },
   textInput: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.xl,
-    height: 80,
-    paddingHorizontal: theme.spacing.l,
-    fontSize: 32,
+    borderRadius: theme.borderRadius.m,
+    height: 56,
+    paddingHorizontal: theme.spacing.m,
+    fontSize: 18,
     fontWeight: 'bold',
     color: theme.colors.text,
-    textAlign: 'center',
+  },
+  selectorBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.m, 
+    height: 56,
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.m,
+  },
+  selectorPlaceholder: {
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontSize: 16,
+  },
+  selectorValue: {
+    color: theme.colors.text,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   planBtn: {
     backgroundColor: theme.colors.primary,
@@ -351,6 +399,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border,
+    overflow: 'hidden',
   },
   modalText: {
     ...theme.typography.body,
