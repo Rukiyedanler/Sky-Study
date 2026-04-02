@@ -38,6 +38,7 @@ const AuthNavigator = () => (
 const MainNavigator = () => (
     <MainStack.Navigator
         screenOptions={{
+            headerShown: false,
             animation: 'slide_from_right',
             gestureEnabled: true,
             gestureDirection: 'horizontal'

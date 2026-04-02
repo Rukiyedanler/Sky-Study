@@ -19,13 +19,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { AuthContext } from '../context/AuthContext';
-import { theme } from '../theme';
+import { Theme } from '../theme';
+import { useThemeContext } from '../context/ThemeContext';
 import { CITIES, filterDestinations, calculateXP, City } from '../utils/flightLogic';
 import { Ticket } from '../components/Ticket';
 import { WheelSpinner } from '../components/WheelSpinner';
 
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
+  const { theme, isNightMode, toggleNightMode } = useThemeContext();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   // Time Parameter
   const [targetDuration, setTargetDuration] = useState<string>('');
@@ -116,9 +119,14 @@ export default function HomeScreen() {
               
               <View style={styles.headerRow}>
                 <Text style={styles.welcomeText}>Sky Study Kulesi</Text>
-                <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-                   <Text style={styles.logoutText}>Çıkış</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <TouchableOpacity onPress={toggleNightMode} style={styles.themeToggleBtn} activeOpacity={0.7}>
+                     <Text style={styles.themeToggleText}>{isNightMode ? '☀️' : '🌙'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+                     <Text style={styles.logoutText}>Çıkış</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {phase === 0 && (
@@ -286,7 +294,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: Theme) => StyleSheet.create({
   backgroundImage: {
     flex: 1,
     width: '100%',
@@ -317,6 +325,25 @@ const styles = StyleSheet.create({
   welcomeText: {
     ...theme.typography.h2,
     color: theme.colors.text,
+  },
+  themeToggleBtn: {
+    padding: theme.spacing.s,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.round,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: theme.colors.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  themeToggleText: {
+    fontSize: 18,
   },
   logoutBtn: {
     padding: theme.spacing.m,

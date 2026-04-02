@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     View,
     Text,
@@ -19,7 +19,8 @@ import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/aut
 import { auth } from '../services/firebaseConfig';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AppNavigator';
-import { theme } from '../theme';
+import { Theme } from '../theme';
+import { useThemeContext } from '../context/ThemeContext';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -28,6 +29,9 @@ interface Props {
 }
 
 export default function LoginScreen({ navigation }: Props) {
+    const { theme } = useThemeContext();
+    const styles = useMemo(() => createStyles(theme), [theme]);
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -174,7 +178,7 @@ export default function LoginScreen({ navigation }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: Theme) => StyleSheet.create({
     backgroundImage: {
         flex: 1,
         width: '100%',
@@ -237,7 +241,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     successContainer: {
-        backgroundColor: 'rgba(16, 185, 129, 0.2)', // Zümrüt Yeşili (theme.colors.success) ama %20 saydam
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
         padding: theme.spacing.m,
         borderRadius: theme.borderRadius.m,
         marginBottom: theme.spacing.l,
@@ -252,7 +256,7 @@ const styles = StyleSheet.create({
     input: {
         backgroundColor: 'transparent',
         borderRadius: theme.borderRadius.l,
-        marginBottom: theme.spacing.m,
+        marginBottom: theme.spacing.s,
         borderWidth: 1,
         borderColor: theme.colors.border,
         paddingHorizontal: theme.spacing.l,
@@ -261,9 +265,9 @@ const styles = StyleSheet.create({
         color: theme.colors.text,
     },
     forgotPasswordContainer: {
+        width: '100%',
         alignItems: 'flex-end',
-        marginBottom: theme.spacing.s,
-        marginTop: -theme.spacing.s, // Pull it slightly up closer to the input
+        marginBottom: theme.spacing.l,
     },
     forgotPasswordText: {
         ...theme.typography.caption,
@@ -275,7 +279,6 @@ const styles = StyleSheet.create({
         borderRadius: theme.borderRadius.round,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: theme.spacing.m,
     },
     buttonText: {
         ...theme.typography.body,
@@ -295,6 +298,7 @@ const styles = StyleSheet.create({
     },
     linkTouch: {
         padding: theme.spacing.s,
+        margin: -theme.spacing.s,
     },
     linkText: {
         ...theme.typography.body,

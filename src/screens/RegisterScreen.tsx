@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     View,
     Text,
@@ -19,7 +19,8 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AppNavigator';
-import { theme } from '../theme';
+import { Theme } from '../theme';
+import { useThemeContext } from '../context/ThemeContext';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -28,6 +29,9 @@ interface Props {
 }
 
 export default function RegisterScreen({ navigation }: Props) {
+    const { theme } = useThemeContext();
+    const styles = useMemo(() => createStyles(theme), [theme]);
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -157,7 +161,7 @@ export default function RegisterScreen({ navigation }: Props) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: Theme) => StyleSheet.create({
     backgroundImage: {
         flex: 1,
         width: '100%',
@@ -256,6 +260,7 @@ const styles = StyleSheet.create({
     },
     linkTouch: {
         padding: theme.spacing.s,
+        margin: -theme.spacing.s,
     },
     linkText: {
         ...theme.typography.body,
