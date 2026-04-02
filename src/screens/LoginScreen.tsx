@@ -15,7 +15,7 @@ import {
     ImageBackground
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AppNavigator';
@@ -32,10 +32,12 @@ export default function LoginScreen({ navigation }: Props) {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
 
     const handleLogin = async () => {
         Keyboard.dismiss();
         setErrorMsg('');
+        setSuccessMsg('');
 
         if (!email || !password) {
             setErrorMsg('Lütfen e-posta ve şifrenizi girin.');
@@ -57,6 +59,30 @@ export default function LoginScreen({ navigation }: Props) {
             setErrorMsg(`Hata: ${errorMessage}`);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleForgotPassword = async () => {
+        Keyboard.dismiss();
+        setErrorMsg('');
+        setSuccessMsg('');
+        
+        if (!email) {
+            setErrorMsg('Şifrenizi sıfırlamak için lütfen üstteki alana e-posta adresinizi girin.');
+            return;
+        }
+
+        try {
+            await sendPasswordResetEmail(auth, email);
+            setSuccessMsg('Şifre sıfırlama bağlantısı gönderildi. Lütfen e-posta (veya spam) kutunuzu kontrol edin.');
+        } catch (error: any) {
+            let msg = 'Sıfırlama bağlantısı gönderilemedi.';
+            if (error.code === 'auth/user-not-found') {
+                msg = 'Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.';
+            } else if (error.code === 'auth/invalid-email') {
+                msg = 'Lütfen geçerli bir e-posta adresi girin.';
+            }
+            setErrorMsg(msg);
         }
     };
 
@@ -84,6 +110,12 @@ export default function LoginScreen({ navigation }: Props) {
                                         </View>
                                     ) : null}
 
+                                    {successMsg ? (
+                                        <View style={styles.successContainer}>
+                                            <Text style={styles.successText}>{successMsg}</Text>
+                                        </View>
+                                    ) : null}
+
                                     <TextInput
                                         style={styles.input}
                                         placeholder="E-posta Adresi"
@@ -105,6 +137,12 @@ export default function LoginScreen({ navigation }: Props) {
                                         returnKeyType="done"
                                         onSubmitEditing={handleLogin}
                                     />
+
+                                    <View style={styles.forgotPasswordContainer}>
+                                        <TouchableOpacity onPress={handleForgotPassword} style={styles.linkTouch} activeOpacity={0.6}>
+                                            <Text style={styles.forgotPasswordText}>Şifremi Unuttum</Text>
+                                        </TouchableOpacity>
+                                    </View>
 
                                     <TouchableOpacity
                                         style={styles.button}
@@ -198,6 +236,19 @@ const styles = StyleSheet.create({
         color: theme.colors.error,
         fontWeight: '600',
     },
+    successContainer: {
+        backgroundColor: 'rgba(16, 185, 129, 0.2)', // Zümrüt Yeşili (theme.colors.success) ama %20 saydam
+        padding: theme.spacing.m,
+        borderRadius: theme.borderRadius.m,
+        marginBottom: theme.spacing.l,
+        borderLeftWidth: 4,
+        borderLeftColor: theme.colors.success,
+    },
+    successText: {
+        ...theme.typography.caption,
+        color: theme.colors.success,
+        fontWeight: '600',
+    },
     input: {
         backgroundColor: 'transparent',
         borderRadius: theme.borderRadius.l,
@@ -208,6 +259,15 @@ const styles = StyleSheet.create({
         height: 56,
         ...theme.typography.body,
         color: theme.colors.text,
+    },
+    forgotPasswordContainer: {
+        alignItems: 'flex-end',
+        marginBottom: theme.spacing.s,
+        marginTop: -theme.spacing.s, // Pull it slightly up closer to the input
+    },
+    forgotPasswordText: {
+        ...theme.typography.caption,
+        color: theme.colors.textSecondary,
     },
     button: {
         backgroundColor: theme.colors.primary,

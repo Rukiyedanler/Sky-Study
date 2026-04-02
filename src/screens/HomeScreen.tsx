@@ -28,7 +28,7 @@ export default function HomeScreen() {
   const { user } = useContext(AuthContext);
 
   // Time Parameter
-  const [targetDuration, setTargetDuration] = useState<string>('60');
+  const [targetDuration, setTargetDuration] = useState<string>('');
   
   // Phase States (0: Input, 1: OriginSpin, 2: DestSpin, 3: Ticket)
   const [phase, setPhase] = useState<number>(0);
@@ -56,17 +56,23 @@ export default function HomeScreen() {
   };
 
   const handleOriginSelected = (selectedCity: City) => {
-    setOriginCity(selectedCity);
     const durationNum = parseInt(targetDuration) || 0;
-    
     const dests = filterDestinations(selectedCity.id, durationNum);
     
     setTimeout(() => {
+        // Her halükarda kullanıcının kazandığı kalkış şehrini ekrana yaz.
+        setOriginCity(selectedCity);
+        setAvailableDests(dests);
+        setPhase(0); 
+        
+        // Eğer seçilen şehre uygun bir uçuş yoksa bilgi ver ama kalkış şehrini "SİLME"!
         if (dests.length === 0) {
-            Alert.alert('Uyarı', `Seçilen ${selectedCity.name} noktasından ${durationNum} dakikalık uçuş bulamadık. Lütfen süreyi değiştirin veya tekrar çevirin.`);
-        } else {
-            setAvailableDests(dests);
-            setPhase(0); // Return to planning card
+            setTimeout(() => {
+                Alert.alert(
+                    'Uçuş Bulunamadı', 
+                    `Kalkış noktanız ${selectedCity.name} olarak belirlendi, ancak ${durationNum} dakika (+30/-20 dk) civarında buraya bağlı bir rota yok.\n\nLütfen Varış Şehri çarkını çevirmeden önce süre alanını büyütüp küçülterek rotanızı araştırın.`
+                );
+            }, 600); // UI renderlandıktan sonra uyarı çıksın
         }
     }, 1500); // Let user see the wheel result for 1.5s
   };
@@ -106,7 +112,6 @@ export default function HomeScreen() {
     <ImageBackground source={{ uri: theme.images.background }} style={styles.backgroundImage} resizeMode="cover">
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex1}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
               
               <View style={styles.headerRow}>
@@ -135,7 +140,14 @@ export default function HomeScreen() {
 
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Kalkış Şehri</Text>
-                    <TouchableOpacity style={styles.selectorBtn} onPress={() => setPhase(1)}>
+                    <TouchableOpacity style={styles.selectorBtn} onPress={() => {
+                        const durationNum = parseInt(targetDuration) || 0;
+                        if (durationNum < 15) {
+                            Alert.alert('Geçersiz Süre', 'Çarkı çevirmeden önce en az 15 dakikalık bir odaklanma süresi belirlemelisiniz.');
+                            return;
+                        }
+                        setPhase(1); // origin wheel
+                    }}>
                        <Text style={originCity ? styles.selectorValue : styles.selectorPlaceholder}>
                          {originCity ? originCity.name : "Şans çarkını çevir..."}
                        </Text>
@@ -147,8 +159,21 @@ export default function HomeScreen() {
                     <TouchableOpacity 
                        style={[styles.selectorBtn, !originCity && { opacity: 0.5 }]} 
                        onPress={() => {
-                          if(!originCity) Alert.alert('Hata', 'Önce kalkış noktasını belirleyin.');
-                          else setPhase(2);
+                          if (!originCity) {
+                              Alert.alert('Hata', 'Önce Kalkış Noktasını belirleyin.');
+                              return;
+                          }
+                          // Güncel süreyi anlık olarak oku ve destinasyonları filtrele! 
+                          // (Kullanıcı kalkış şehrinden sonra süreyi değiştirmiş olabilir)
+                          const durationNum = parseInt(targetDuration) || 0;
+                          const freshDests = filterDestinations(originCity.id, durationNum);
+                          
+                          if (freshDests.length === 0) {
+                              Alert.alert('Hedef Bulunamadı', `${originCity.name} kalkışlı ${durationNum} dk süreli uçuş yok. Kutucuktaki süreyi uçuş bulana dek değiştirip tekrar tıklayın.`);
+                              return;
+                          }
+                          setAvailableDests(freshDests);
+                          setPhase(2);
                        }}
                     >
                        <Text style={activeFlight ? styles.selectorValue : styles.selectorPlaceholder}>
@@ -211,10 +236,14 @@ export default function HomeScreen() {
                  <ImageBackground source={{ uri: theme.images.background }} style={styles.backgroundImage} resizeMode="cover">
                    <WheelSpinner 
                       title="Varış Noktası"
-                      subtitle={`${originCity?.name} kalkışlı ${parseInt(targetDuration)} dk menzilli uçuş aranıyor...`}
-                      pool={availableDests} // Important trick to make the type system happy without rewriting logic
+                      subtitle={`${originCity?.name} kalkışlı ${parseInt(targetDuration)} dk uçuş aranıyor...`}
+                      pool={availableDests.map(d => d.city)} // Çarkın arayüzü yalnızca "City" nesnesini bekler
                       onCancel={resetFlow}
-                      onSelected={(item: any) => handleDestinationSelected(item)}
+                      onSelected={(selectedCity: City) => {
+                          // Seçilen salt şehri, listedeki süresiyle tekrar eşleştirip gönderiyoruz
+                          const matchedDest = availableDests.find(d => d.city.id === selectedCity.id);
+                          handleDestinationSelected(matchedDest);
+                      }}
                    />
                  </ImageBackground>
               </Modal>
@@ -251,7 +280,6 @@ export default function HomeScreen() {
               </Modal>
 
             </ScrollView>
-          </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ImageBackground>
