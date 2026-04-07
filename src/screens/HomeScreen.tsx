@@ -24,8 +24,16 @@ import { useThemeContext } from '../context/ThemeContext';
 import { CITIES, filterDestinations, calculateXP, City } from '../utils/flightLogic';
 import { Ticket } from '../components/Ticket';
 import { WheelSpinner } from '../components/WheelSpinner';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MainStackParamList } from '../navigation/AppNavigator';
 
-export default function HomeScreen() {
+type HomeScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
+
+interface Props {
+  navigation: HomeScreenNavigationProp;
+}
+
+export default function HomeScreen({ navigation }: Props) {
   const { user } = useContext(AuthContext);
   const { theme, isNightMode, toggleNightMode } = useThemeContext();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
@@ -209,7 +217,10 @@ export default function HomeScreen() {
                       duration={activeFlight.duration}
                       xp={activeFlight.xp}
                       onConfirm={() => {
-                          Alert.alert('Başarılı', 'Bilet Kesildi! İyi Uçuşlar.'); 
+                          navigation.navigate('ActiveFlight', {
+                              route: `${activeFlight.origin.name} - ${activeFlight.dest.name}`,
+                              duration: activeFlight.duration
+                          });
                       }}
                       onRefund={() => setRefundModalVisible(true)}
                     />
