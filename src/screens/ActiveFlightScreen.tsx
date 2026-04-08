@@ -21,8 +21,12 @@ export default function ActiveFlightScreen({ route }: Props) {
 
   const { route: flightRoute, duration } = route.params;
 
+  const totalSeconds = duration * 60;
   // Toplam saniyeyi State olarak tut
-  const [timeLeft, setTimeLeft] = useState(duration * 60);
+  const [timeLeft, setTimeLeft] = useState(totalSeconds);
+
+  // İlerleme yüzdesi hesaplama
+  const progressPercentage = ((totalSeconds - timeLeft) / totalSeconds) * 100;
 
   useEffect(() => {
     // 0 olduğunda dur
@@ -49,6 +53,16 @@ export default function ActiveFlightScreen({ route }: Props) {
           
           <View style={styles.timerContainer}>
             <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+          </View>
+
+          {/* İlerleme Çubuğu */}
+          <View style={styles.progressWrapper}>
+            <View style={styles.progressBarBackground}>
+              <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
+            </View>
+            <View style={[styles.airplaneIconContainer, { left: `${progressPercentage}%` }]}>
+              <Text style={styles.airplaneIcon}>✈️</Text>
+            </View>
           </View>
         </BlurView>
       </View>
@@ -101,5 +115,33 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 2,
     fontVariant: ['tabular-nums'], // engellerin oynamaması için
+  },
+  progressWrapper: {
+    width: '100%',
+    height: 40,
+    justifyContent: 'center',
+    marginVertical: theme.spacing.m,
+  },
+  progressBarBackground: {
+    width: '100%',
+    height: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: theme.borderRadius.round,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: theme.colors.accent, // Pastel Lila
+    borderRadius: theme.borderRadius.round,
+  },
+  airplaneIconContainer: {
+    position: 'absolute',
+    top: 0,
+    transform: [{ translateX: -15 }], // Center the icon over the progress point
+    width: 30,
+    alignItems: 'center',
+  },
+  airplaneIcon: {
+    fontSize: 24,
   },
 });
