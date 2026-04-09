@@ -1,12 +1,17 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useThemeContext } from '../context/ThemeContext';
 import { Theme } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ActiveFlight'>;
+
+// Web için iframe
+const WebIframe = 'iframe' as any;
+const isWeb = Platform.OS === 'web';
 
 // Helper function to format seconds into MM:SS
 const formatTime = (totalSeconds: number) => {
@@ -25,6 +30,10 @@ export default function ActiveFlightScreen({ route }: Props) {
   // Toplam saniyeyi State olarak tut
   const [timeLeft, setTimeLeft] = useState(totalSeconds);
 
+  // Müzik state'leri (Sadece Web için kullanılacak)
+  const [isMuted, setIsMuted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
+
   // İlerleme yüzdesi hesaplama
   const progressPercentage = ((totalSeconds - timeLeft) / totalSeconds) * 100;
 
@@ -32,6 +41,7 @@ export default function ActiveFlightScreen({ route }: Props) {
     // 0 olduğunda dur
     if (timeLeft <= 0) {
       console.log('Uçuş Bitti!');
+      setIsPlaying(false);
       return;
     }
 
@@ -44,11 +54,36 @@ export default function ActiveFlightScreen({ route }: Props) {
     return () => clearInterval(intervalId);
   }, [timeLeft]);
 
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
   return (
     <ImageBackground source={{ uri: theme.images.background }} style={styles.backgroundImage} resizeMode="cover">
       <View style={styles.container}>
+        
+        {/* Gizli Youtube Oynatıcı - Yalnızca Web */}
+        {isWeb && isPlaying && (
+          <View style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }} pointerEvents="none">
+            <WebIframe
+              src={`https://www.youtube.com/embed/videoseries?list=PLMAyoLwiBNFQzGjg4qyLauq98A7YOCU1I&autoplay=1&mute=${isMuted ? 1 : 0}`}
+              style={{ width: 0, height: 0, border: 0 }}
+              allow="autoplay"
+            />
+          </View>
+        )}
+
         <BlurView intensity={60} tint="dark" style={styles.panel}>
-          <Text style={styles.title}>Aktif Uçuş</Text>
+          
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Aktif Uçuş</Text>
+            {isWeb && (
+              <TouchableOpacity onPress={toggleMute} style={styles.muteButton}>
+                <Ionicons name={isMuted ? "volume-mute" : "volume-medium"} size={24} color={theme.colors.accent} />
+              </TouchableOpacity>
+            )}
+          </View>
+          
           <Text style={styles.routeText}>{flightRoute}</Text>
           
           <View style={styles.timerContainer}>
@@ -81,6 +116,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing.xl,
+    position: 'relative',
   },
   panel: {
     width: '100%',
@@ -92,11 +128,25 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    position: 'relative',
+    marginBottom: theme.spacing.l,
+  },
   title: {
     ...theme.typography.h1,
     color: '#FFFFFF',
-    marginBottom: theme.spacing.l,
     textAlign: 'center',
+  },
+  muteButton: {
+    position: 'absolute',
+    right: 0,
+    padding: theme.spacing.s,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: theme.borderRadius.round,
   },
   routeText: {
     ...theme.typography.h2,
