@@ -28,6 +28,7 @@ import { Ticket } from '../components/Ticket';
 import { WheelSpinner } from '../components/WheelSpinner';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
+import { Ionicons } from '@expo/vector-icons';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
 
@@ -57,6 +58,7 @@ export default function HomeScreen({ navigation }: Props) {
   // Recent Flights
   const [recentFlights, setRecentFlights] = useState<any[]>([]);
   const [loadingFlights, setLoadingFlights] = useState(false);
+  const [totalXP, setTotalXP] = useState<number>(0);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -76,8 +78,18 @@ export default function HomeScreen({ navigation }: Props) {
           querySnapshot.forEach((doc) => {
             flights.push({ id: doc.id, ...doc.data() });
           });
+
+          // Toplam XP hesaplama
+          const qAll = query(collection(db, 'flights'), where('userId', '==', user.uid));
+          const allSnapshot = await getDocs(qAll);
+          let sumXP = 0;
+          allSnapshot.forEach(doc => {
+            sumXP += (doc.data().xp || 0);
+          });
+
           if (isActive) {
             setRecentFlights(flights);
+            setTotalXP(sumXP);
           }
         } catch (error) {
           console.error("Uçuşlar çekilirken hata:", error);
@@ -168,7 +180,13 @@ export default function HomeScreen({ navigation }: Props) {
             <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
               
               <View style={styles.headerRow}>
-                <Text style={styles.welcomeText}>Sky Study Kulesi</Text>
+                <View>
+                  <Text style={styles.welcomeText}>Hoş geldin, {user?.email?.split('@')[0] || 'Pilot'}!</Text>
+                  <View style={styles.xpContainer}>
+                    <Ionicons name="star" size={16} color="#93C5FD" />
+                    <Text style={styles.xpText}>Toplam Uçuş Puanı: {totalXP} XP</Text>
+                  </View>
+                </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <TouchableOpacity onPress={toggleNightMode} style={styles.themeToggleBtn} activeOpacity={0.7}>
                      <Text style={styles.themeToggleText}>{isNightMode ? '☀️' : '🌙'}</Text>
@@ -405,6 +423,24 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   welcomeText: {
     ...theme.typography.h2,
     color: theme.colors.text,
+  },
+  xpContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    backgroundColor: 'rgba(147, 197, 253, 0.15)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: theme.borderRadius.l,
+    borderWidth: 1,
+    borderColor: 'rgba(147, 197, 253, 0.3)',
+  },
+  xpText: {
+    ...theme.typography.caption,
+    color: '#F8FAFC',
+    fontWeight: 'bold',
+    marginLeft: 6,
   },
   themeToggleBtn: {
     padding: theme.spacing.s,
