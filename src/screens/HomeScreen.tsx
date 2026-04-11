@@ -17,8 +17,10 @@ import {
 import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut } from 'firebase/auth';
-import { auth } from '../services/firebaseConfig';
+import { auth, db } from '../services/firebaseConfig';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { AuthContext } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { Theme } from '../theme';
 import { useThemeContext } from '../context/ThemeContext';
 import { CITIES, filterDestinations, calculateXP, City } from '../utils/flightLogic';
@@ -51,6 +53,46 @@ export default function HomeScreen({ navigation }: Props) {
 
   // Modals
   const [isRefundModalVisible, setRefundModalVisible] = useState(false);
+
+  // Recent Flights
+  const [recentFlights, setRecentFlights] = useState<any[]>([]);
+  const [loadingFlights, setLoadingFlights] = useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let isActive = true;
+      const fetchFlights = async () => {
+        if (!user) return;
+        setLoadingFlights(true);
+        try {
+          const q = query(
+            collection(db, 'flights'),
+            where('userId', '==', user.uid),
+            orderBy('date', 'desc'),
+            limit(5)
+          );
+          const querySnapshot = await getDocs(q);
+          const flights: any[] = [];
+          querySnapshot.forEach((doc) => {
+            flights.push({ id: doc.id, ...doc.data() });
+          });
+          if (isActive) {
+            setRecentFlights(flights);
+          }
+        } catch (error) {
+          console.error("Uçuşlar çekilirken hata:", error);
+        } finally {
+          if (isActive) setLoadingFlights(false);
+        }
+      };
+
+      fetchFlights();
+
+      return () => {
+        isActive = false;
+      };
+    }, [user])
+  );
 
   const showTicket = () => {
     Keyboard.dismiss();
@@ -206,6 +248,33 @@ export default function HomeScreen({ navigation }: Props) {
                     <Text style={styles.planBtnText}>Yolculuğu Planla</Text>
                   </TouchableOpacity>
                 </BlurView>
+              )}
+
+              {/* Son Uçuşlarınız Bölümü */}
+              {phase === 0 && (
+                <View style={styles.recentFlightsSection}>
+                  <Text style={styles.recentFlightsTitle}>Son Uçuşlarınız</Text>
+                  
+                  {loadingFlights ? (
+                    <Text style={styles.emptyFlightsText}>Uçuşlar yükleniyor...</Text>
+                  ) : recentFlights.length === 0 ? (
+                    <BlurView intensity={30} tint="dark" style={styles.emptyFlightsCard}>
+                      <Text style={styles.emptyFlightsText}>Henüz bir uçuş yapmadınız, hemen planla!</Text>
+                    </BlurView>
+                  ) : (
+                    recentFlights.map((flight) => (
+                      <BlurView intensity={40} tint="dark" style={styles.flightCard} key={flight.id}>
+                        <View style={styles.flightCardHeader}>
+                          <Text style={styles.flightRoute}>{flight.departure} -> {flight.arrival}</Text>
+                          <Text style={styles.flightDate}>
+                            {new Date(flight.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                          </Text>
+                        </View>
+                        <Text style={styles.flightDuration}>Süre: {flight.duration} Dk / +{flight.xp} XP</Text>
+                      </BlurView>
+                    ))
+                  )}
+                </View>
               )}
 
               {phase === 3 && activeFlight && (
@@ -490,5 +559,56 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  recentFlightsSection: {
+    width: '100%',
+    marginTop: theme.spacing.xl,
+  },
+  recentFlightsTitle: {
+    ...theme.typography.h2,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.m,
+  },
+  emptyFlightsCard: {
+    width: '100%',
+    backgroundColor: 'rgba(31, 41, 55, 0.4)',
+    borderRadius: theme.borderRadius.l,
+    padding: theme.spacing.l,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+  },
+  emptyFlightsText: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  flightCard: {
+    width: '100%',
+    backgroundColor: 'rgba(31, 41, 55, 0.6)',
+    borderRadius: theme.borderRadius.m,
+    padding: theme.spacing.m,
+    marginBottom: theme.spacing.s,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  flightCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  flightRoute: {
+    ...theme.typography.body,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  flightDate: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  },
+  flightDuration: {
+    ...theme.typography.caption,
+    color: theme.colors.secondary,
   },
 });
