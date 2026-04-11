@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useContext, useRef } from 'react';
 import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Platform, Modal } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -6,6 +6,9 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 import { useThemeContext } from '../context/ThemeContext';
 import { Theme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
+import { db } from '../services/firebaseConfig';
+import { collection, addDoc } from 'firebase/firestore';
+import { AuthContext } from '../context/AuthContext';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ActiveFlight'>;
 
@@ -23,6 +26,8 @@ const formatTime = (totalSeconds: number) => {
 export default function ActiveFlightScreen({ route, navigation }: Props) {
   const { theme } = useThemeContext();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const { user } = useContext(AuthContext);
+  const hasSavedRef = useRef(false);
 
   const { route: flightRoute, duration } = route.params;
 
@@ -42,8 +47,35 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
   useEffect(() => {
     // 0 olduğunda dur
     if (timeLeft <= 0) {
+      if (hasSavedRef.current) return;
+      hasSavedRef.current = true;
+
       console.log('Uçuş Bitti!');
       setIsPlaying(false);
+
+      const saveFlightAndNavigate = async () => {
+        if (user) {
+          try {
+            const [departure, arrival] = flightRoute.split('->').map(s => s.trim());
+            const xpEarned = duration * 10;
+            
+            await addDoc(collection(db, 'flights'), {
+              userId: user.uid,
+              departure: departure || 'Bilinmiyor',
+              arrival: arrival || 'Bilinmiyor',
+              duration: duration,
+              xp: xpEarned,
+              date: new Date().toISOString()
+            });
+            console.log('Uçuş başarıyla Firebase e kaydedildi.');
+          } catch (error) {
+            console.error('Uçuş kaydedilirken hata:', error);
+          }
+        }
+        navigation.replace('LandingSuccess', { route: flightRoute, duration });
+      };
+
+      saveFlightAndNavigate();
       return;
     }
 

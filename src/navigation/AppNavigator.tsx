@@ -8,6 +8,7 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ActiveFlightScreen from '../screens/ActiveFlightScreen';
+import LandingSuccessScreen from '../screens/LandingSuccessScreen';
 
 // Types for Navigation
 export type AuthStackParamList = {
@@ -18,6 +19,10 @@ export type AuthStackParamList = {
 export type MainStackParamList = {
     Home: undefined;
     ActiveFlight: {
+        route: string;
+        duration: number;
+    };
+    LandingSuccess: {
         route: string;
         duration: number;
     };
@@ -51,6 +56,7 @@ const MainNavigator = () => (
     >
         <MainStack.Screen name="Home" component={HomeScreen} options={{ title: 'Sky Study' }} />
         <MainStack.Screen name="ActiveFlight" component={ActiveFlightScreen} />
+        <MainStack.Screen name="LandingSuccess" component={LandingSuccessScreen} options={{ animation: 'fade' }} />
     </MainStack.Navigator>
 );
 
