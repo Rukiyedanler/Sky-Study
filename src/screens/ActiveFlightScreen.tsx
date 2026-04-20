@@ -60,6 +60,7 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
             
             await addDoc(collection(db, 'flights'), {
               userId: user.uid,
+              userEmail: user.email || 'Anonim',
               departure: departure || 'Bilinmiyor',
               arrival: arrival || 'Bilinmiyor',
               duration: duration,
