@@ -30,7 +30,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Home'>;
+type HomeScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'MainTabs'>;
 
 interface Props {
   navigation: HomeScreenNavigationProp;

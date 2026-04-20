@@ -148,7 +148,7 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
     if (soundRef.current) {
       await soundRef.current.stopAsync();
     }
-    navigation.navigate('Home'); 
+    navigation.navigate('MainTabs'); 
   };
 
   return (
