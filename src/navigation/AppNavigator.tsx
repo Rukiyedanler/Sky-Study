@@ -35,7 +35,7 @@ const AuthNavigator = () => (
     <AuthStack.Navigator
         screenOptions={{
             headerShown: false,
-            animation: 'slide_from_right',
+            animation: 'fade',
             gestureEnabled: true,
             gestureDirection: 'horizontal'
         }}
@@ -49,7 +49,7 @@ const MainNavigator = () => (
     <MainStack.Navigator
         screenOptions={{
             headerShown: false,
-            animation: 'slide_from_right',
+            animation: 'fade',
             gestureEnabled: true,
             gestureDirection: 'horizontal'
         }}

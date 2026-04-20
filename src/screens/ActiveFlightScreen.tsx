@@ -9,11 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { db } from '../services/firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
 import { AuthContext } from '../context/AuthContext';
+import { Audio } from 'expo-av';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ActiveFlight'>;
 
-// Web için iframe
-const WebIframe = 'iframe' as any;
 const isWeb = Platform.OS === 'web';
 
 // Helper function to format seconds into MM:SS
@@ -34,9 +33,9 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
   const totalSeconds = duration * 60;
   const [timeLeft, setTimeLeft] = useState(totalSeconds);
 
-  // Müzik state'leri (Sadece Web için kullanılacak)
-  const [isMuted, setIsMuted] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(true);
+  // Müzik state ve referansı
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // Modal State
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -91,10 +90,48 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
 
     // Unmount olduğunda veya yeniden render edildiğinde temizle
     return () => clearInterval(intervalId);
-  }, [timeLeft, isModalVisible]);
+  }, [timeLeft, isModalVisible, flightRoute, duration, user, navigation]);
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
+  // Ses yükleme efekti
+  useEffect(() => {
+    async function loadAudio() {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          shouldDuckAndroid: true,
+        });
+
+        // Rahatlatıcı / Lo-fi Royalty Free Müzik
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: 'https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3' },
+          { shouldPlay: true, isLooping: true, volume: 0.4 }
+        );
+        soundRef.current = sound;
+        setIsPlaying(true);
+      } catch (error) {
+        console.log('Müzik yüklenemedi', error);
+      }
+    }
+    loadAudio();
+
+    // Cleanup: Bileşen unmount olunca sesi belleğinden sil.
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
+
+  const togglePlayback = async () => {
+    if (!soundRef.current) return;
+    if (isPlaying) {
+      await soundRef.current.pauseAsync();
+      setIsPlaying(false);
+    } else {
+      await soundRef.current.playAsync();
+      setIsPlaying(true);
+    }
   };
 
   const handleEmergencyClick = () => {
@@ -106,35 +143,24 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
     setIsModalVisible(false);
   };
 
-  const handleConfirmEmergency = () => {
+  const handleConfirmEmergency = async () => {
     setIsModalVisible(false);
-    setIsPlaying(false); // İframe kapanır
-    navigation.navigate('Home'); // Ana Ekrana (Home) geri dön
+    if (soundRef.current) {
+      await soundRef.current.stopAsync();
+    }
+    navigation.navigate('Home'); 
   };
 
   return (
     <ImageBackground source={{ uri: theme.images.background }} style={styles.backgroundImage} resizeMode="cover">
       <View style={styles.container}>
-        
-        {/* Gizli Youtube Oynatıcı - Yalnızca Web */}
-        {isWeb && isPlaying && (
-          <View style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }} pointerEvents="none">
-            <WebIframe
-              src={`https://www.youtube.com/embed/videoseries?list=PLMAyoLwiBNFQzGjg4qyLauq98A7YOCU1I&autoplay=1&mute=${isMuted ? 1 : 0}`}
-              style={{ width: 0, height: 0, border: 0 }}
-              allow="autoplay"
-            />
-          </View>
-        )}
 
         <BlurView intensity={60} tint="dark" style={styles.panel}>
           <View style={styles.headerContainer}>
             <Text style={styles.title}>Aktif Uçuş</Text>
-            {isWeb && (
-              <TouchableOpacity onPress={toggleMute} style={styles.muteButton}>
-                <Ionicons name={isMuted ? "volume-mute" : "volume-medium"} size={24} color={theme.colors.accent} />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity onPress={togglePlayback} style={styles.muteButton}>
+              <Ionicons name={isPlaying ? "pause-circle" : "play-circle"} size={36} color="#93C5FD" />
+            </TouchableOpacity>
           </View>
           
           <Text style={styles.routeText}>{flightRoute}</Text>
@@ -171,11 +197,11 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
               
               <View style={styles.modalButtonsContainer}>
                 <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={handleCancelEmergency}>
-                  <Text style={styles.modalButtonText}>Hayır, Devam Et</Text>
+                  <Text style={styles.cancelButtonText}>Hayır, Devam Et</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handleConfirmEmergency}>
-                  <Text style={styles.modalButtonText}>Evet, Acil İniş Yap</Text>
+                  <Text style={styles.confirmButtonText}>Evet, İptal Et</Text>
                 </TouchableOpacity>
               </View>
             </BlurView>
@@ -328,14 +354,18 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButton: {
-    backgroundColor: theme.colors.primary, 
+    backgroundColor: '#6EE7B7', 
+  },
+  cancelButtonText: {
+    color: '#064E3B', // Koyu yeşil metin
+    fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'center',
   },
   confirmButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#EF4444', 
+    backgroundColor: '#F4A261', // Pastel Turuncu
   },
-  modalButtonText: {
+  confirmButtonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
