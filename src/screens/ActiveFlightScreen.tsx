@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useContext, useRef } from 'react';
 import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Platform, Modal } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { MainStackParamList } from '../navigation/AppNavigator';
+import type { MainStackParamList } from '../navigation/AppNavigator';
 import { useThemeContext } from '../context/ThemeContext';
 import { Theme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -149,7 +149,7 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
     if (soundRef.current) {
       await soundRef.current.stopAsync();
     }
-    navigation.navigate('MainTabs'); 
+    navigation.navigate('MainDrawer'); 
   };
 
   return (

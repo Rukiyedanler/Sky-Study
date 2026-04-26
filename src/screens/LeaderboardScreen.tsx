@@ -6,7 +6,8 @@ import {
   FlatList, 
   ActivityIndicator, 
   ImageBackground,
-  SafeAreaView
+  SafeAreaView,
+  TouchableOpacity
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { collection, getDocs } from 'firebase/firestore';
@@ -24,7 +25,7 @@ interface LeaderboardUser {
     rank: number;
 }
 
-export default function LeaderboardScreen() {
+export default function LeaderboardScreen({ navigation }: any) {
     const { theme } = useThemeContext();
     const styles = useMemo(() => createStyles(theme), [theme]);
     const { user } = useContext(AuthContext);
@@ -144,6 +145,9 @@ export default function LeaderboardScreen() {
                     <BlurView intensity={70} tint="dark" style={styles.panel}>
                         
                         <View style={styles.header}>
+                            <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ position: 'absolute', left: 0 }}>
+                                <Ionicons name="menu" size={32} color={theme.colors.text} />
+                            </TouchableOpacity>
                             <Ionicons name="trophy" size={32} color="#FBBF24" style={{ marginRight: 8 }} />
                             <Text style={styles.title}>Liderlik Tablosu</Text>
                         </View>
@@ -201,7 +205,6 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
         padding: theme.spacing.m,
-        paddingBottom: 80, // Tab bar margin
     },
     panel: {
         flex: 1,

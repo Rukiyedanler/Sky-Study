@@ -161,6 +161,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
         padding: theme.spacing.xl,
+        paddingBottom: 130, // Yüzen alt menüye çarpmasını önlemek için.
     },
     loadingContainer: {
         flex: 1,

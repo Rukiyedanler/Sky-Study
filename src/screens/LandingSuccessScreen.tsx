@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ImageBackground, TouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { MainStackParamList } from '../navigation/AppNavigator';
+import type { MainStackParamList } from '../navigation/AppNavigator';
 import { useThemeContext } from '../context/ThemeContext';
 import { Theme } from '../theme';
 

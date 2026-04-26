@@ -27,10 +27,10 @@ import { CITIES, filterDestinations, calculateXP, City } from '../utils/flightLo
 import { Ticket } from '../components/Ticket';
 import { WheelSpinner } from '../components/WheelSpinner';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MainStackParamList } from '../navigation/AppNavigator';
+import type { MainStackParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'MainTabs'>;
+type HomeScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'MainDrawer'>;
 
 interface Props {
   navigation: HomeScreenNavigationProp;
@@ -180,14 +180,14 @@ export default function HomeScreen({ navigation }: Props) {
             <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
               
               <View style={styles.headerRow}>
-                <View>
-                  <Text style={styles.welcomeText}>Hoş geldin, {user?.email?.split('@')[0] || 'Pilot'}!</Text>
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text style={styles.welcomeText} numberOfLines={1} adjustsFontSizeToFit>Hoş geldin, {user?.email?.split('@')[0] || 'Pilot'}!</Text>
                   <View style={styles.xpContainer}>
                     <Ionicons name="star" size={16} color="#93C5FD" />
                     <Text style={styles.xpText}>Toplam Uçuş Puanı: {totalXP} XP</Text>
                   </View>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <TouchableOpacity onPress={toggleNightMode} style={styles.themeToggleBtn} activeOpacity={0.7}>
                      <Text style={styles.themeToggleText}>{isNightMode ? '☀️' : '🌙'}</Text>
                   </TouchableOpacity>
@@ -283,7 +283,7 @@ export default function HomeScreen({ navigation }: Props) {
                     recentFlights.map((flight) => (
                       <BlurView intensity={40} tint="dark" style={styles.flightCard} key={flight.id}>
                         <View style={styles.flightCardHeader}>
-                          <Text style={styles.flightRoute}>{flight.departure} -> {flight.arrival}</Text>
+                          <Text style={styles.flightRoute}>{flight.departure} {'->'} {flight.arrival}</Text>
                           <Text style={styles.flightDate}>
                             {new Date(flight.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
                           </Text>
@@ -408,6 +408,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     padding: theme.spacing.xl, // Daha fazla kenar boşluğu
+    paddingBottom: 40, // Eskiden alt tab menüsü için 130'du, şimdi çekmece menü olduğu için azalttık
     alignItems: 'center',
     width: '100%',
     maxWidth: 700, // Büyük ekranlarda/Web'de gereksiz uzamayı engelleyip ortalar

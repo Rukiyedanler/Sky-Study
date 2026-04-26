@@ -12,13 +12,14 @@ import {
     TouchableWithoutFeedback,
     Keyboard,
     StatusBar,
-    ImageBackground
+    ImageBackground,
+    Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../navigation/AppNavigator';
+import type { AuthStackParamList } from '../navigation/AppNavigator';
 import { Theme } from '../theme';
 import { useThemeContext } from '../context/ThemeContext';
 
@@ -103,7 +104,7 @@ export default function LoginScreen({ navigation }: Props) {
                             
                             <View style={styles.glassPanel}>
                                 <View style={styles.header}>
-                                    <Text style={styles.title}>Sky Study</Text>
+                                    <Image source={require('../../assets/logo.jpg')} style={styles.logo} resizeMode="contain" />
                                     <Text style={styles.subtitle}>Hesabınıza giriş yapın</Text>
                                 </View>
 
@@ -212,6 +213,12 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     header: {
         marginBottom: theme.spacing.xxl,
         alignItems: 'center',
+    },
+    logo: {
+        width: 120,
+        height: 120,
+        marginBottom: theme.spacing.m,
+        borderRadius: theme.borderRadius.l,
     },
     title: {
         ...theme.typography.h1,
