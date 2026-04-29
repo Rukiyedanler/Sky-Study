@@ -26,11 +26,11 @@ import { useThemeContext } from '../context/ThemeContext';
 import { CITIES, filterDestinations, calculateXP, City } from '../utils/flightLogic';
 import { Ticket } from '../components/Ticket';
 import { WheelSpinner } from '../components/WheelSpinner';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { MainStackParamList } from '../navigation/AppNavigator';
+import { DrawerNavigationProp } from '@react-navigation/drawer';
+import type { DrawerParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'MainDrawer'>;
+type HomeScreenNavigationProp = any;
 
 interface Props {
   navigation: HomeScreenNavigationProp;
@@ -180,6 +180,11 @@ export default function HomeScreen({ navigation }: Props) {
             <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
               
               <View style={styles.headerRow}>
+                {Platform.OS !== 'web' && (
+                  <TouchableOpacity onPress={() => navigation.openDrawer()} style={[styles.themeToggleBtn, { marginRight: 12 }]} activeOpacity={0.7}>
+                     <Ionicons name="menu" size={24} color={theme.colors.text} />
+                  </TouchableOpacity>
+                )}
                 <View style={{ flex: 1, paddingRight: 12 }}>
                   <Text style={styles.welcomeText} numberOfLines={1} adjustsFontSizeToFit>Hoş geldin, {user?.email?.split('@')[0] || 'Pilot'}!</Text>
                   <View style={styles.xpContainer}>
@@ -281,14 +286,23 @@ export default function HomeScreen({ navigation }: Props) {
                     </BlurView>
                   ) : (
                     recentFlights.map((flight) => (
-                      <BlurView intensity={40} tint="dark" style={styles.flightCard} key={flight.id}>
+                      <BlurView 
+                        intensity={40} 
+                        tint="dark" 
+                        style={[styles.flightCard, flight.status === 'failed' && { borderColor: '#EF4444', backgroundColor: 'rgba(239, 68, 68, 0.1)' }]} 
+                        key={flight.id}
+                      >
                         <View style={styles.flightCardHeader}>
-                          <Text style={styles.flightRoute}>{flight.departure} {'->'} {flight.arrival}</Text>
+                          <Text style={[styles.flightRoute, flight.status === 'failed' && { color: '#FCA5A5', textDecorationLine: 'line-through' }]}>
+                            {flight.departure} {'->'} {flight.arrival}
+                          </Text>
                           <Text style={styles.flightDate}>
                             {new Date(flight.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
                           </Text>
                         </View>
-                        <Text style={styles.flightDuration}>Süre: {flight.duration} Dk / +{flight.xp} XP</Text>
+                        <Text style={[styles.flightDuration, flight.status === 'failed' && { color: '#F87171' }]}>
+                          {flight.status === 'failed' ? `Süre: ${flight.duration} Dk (Başarısız ❌)` : `Süre: ${flight.duration} Dk / +${flight.xp} XP`}
+                        </Text>
                       </BlurView>
                     ))
                   )}
@@ -408,7 +422,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     padding: theme.spacing.xl, // Daha fazla kenar boşluğu
-    paddingBottom: 40, // Eskiden alt tab menüsü için 130'du, şimdi çekmece menü olduğu için azalttık
+    paddingBottom: Platform.OS === 'web' ? 130 : 40, // Web'de tab menü, mobilde drawer olduğu için 
     alignItems: 'center',
     width: '100%',
     maxWidth: 700, // Büyük ekranlarda/Web'de gereksiz uzamayı engelleyip ortalar

@@ -7,7 +7,8 @@ import {
   ActivityIndicator, 
   ImageBackground,
   SafeAreaView,
-  Alert
+  Alert,
+  Platform
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +21,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useThemeContext } from '../context/ThemeContext';
 import { Theme } from '../theme';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }: any) {
     const { theme } = useThemeContext();
     const styles = useMemo(() => createStyles(theme), [theme]);
     const { user } = useContext(AuthContext);
@@ -44,8 +45,10 @@ export default function ProfileScreen() {
                     
                     allSnapshot.forEach(doc => {
                         const data = doc.data();
-                        sumXP += (data.xp || 0);
-                        sumDuration += (data.duration || 0);
+                        if (data.status !== 'failed') {
+                            sumXP += (data.xp || 0);
+                            sumDuration += (data.duration || 0);
+                        }
                     });
 
                     if (isActive) {
@@ -104,6 +107,14 @@ export default function ProfileScreen() {
                     ) : (
                         <View style={styles.content}>
                             {/* Üst Profil Kartı */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.m }}>
+                                {Platform.OS !== 'web' && (
+                                    <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ marginRight: 16 }}>
+                                        <Ionicons name="menu" size={32} color={theme.colors.text} />
+                                    </TouchableOpacity>
+                                )}
+                                <Text style={{ ...theme.typography.h1, color: theme.colors.text }}>Profilim</Text>
+                            </View>
                             <BlurView intensity={70} tint="dark" style={styles.profileCard}>
                                 <View style={styles.avatarContainer}>
                                     <View style={styles.avatarCircle}>

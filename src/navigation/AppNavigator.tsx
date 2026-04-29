@@ -57,7 +57,44 @@ const AuthNavigator = () => (
     </AuthStack.Navigator>
 );
 
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+
 const Drawer = createDrawerNavigator<DrawerParamList>();
+const Tab = createBottomTabNavigator<DrawerParamList>();
+
+const AppTabNavigator = () => {
+    return (
+        <Tab.Navigator
+            screenOptions={({ route }) => ({
+                headerShown: false,
+                tabBarStyle: {
+                    backgroundColor: 'rgba(31, 41, 55, 0.95)',
+                    borderTopWidth: 1,
+                    borderTopColor: 'rgba(255,255,255,0.1)',
+                },
+                tabBarActiveTintColor: '#3B82F6',
+                tabBarInactiveTintColor: '#9CA3AF',
+                tabBarIcon: ({ focused, color, size }) => {
+                    let iconName: keyof typeof Ionicons.glyphMap;
+
+                    if (route.name === 'HomeDrawer') {
+                        iconName = focused ? 'airplane' : 'airplane-outline';
+                    } else if (route.name === 'LeaderboardDrawer') {
+                        iconName = focused ? 'trophy' : 'trophy-outline';
+                    } else {
+                        iconName = focused ? 'person' : 'person-outline';
+                    }
+
+                    return <Ionicons name={iconName} size={24} color={color} />;
+                },
+            })}
+        >
+            <Tab.Screen name="HomeDrawer" component={HomeScreen} options={{ tabBarLabel: 'Uçuş Planı' }} />
+            <Tab.Screen name="LeaderboardDrawer" component={LeaderboardScreen} options={{ tabBarLabel: 'Sıralama' }} />
+            <Tab.Screen name="ProfileDrawer" component={ProfileScreen} options={{ tabBarLabel: 'Profil' }} />
+        </Tab.Navigator>
+    );
+};
 
 const AppDrawerNavigator = () => {
     return (
@@ -106,7 +143,7 @@ const MainNavigator = () => (
             gestureDirection: 'horizontal'
         }}
     >
-        <MainStack.Screen name="MainDrawer" component={AppDrawerNavigator} />
+        <MainStack.Screen name="MainDrawer" component={Platform.OS === 'web' ? AppTabNavigator : AppDrawerNavigator} />
         <MainStack.Screen name="ActiveFlight" component={ActiveFlightScreen} />
         <MainStack.Screen name="LandingSuccess" component={LandingSuccessScreen} options={{ animation: 'fade' }} />
     </MainStack.Navigator>

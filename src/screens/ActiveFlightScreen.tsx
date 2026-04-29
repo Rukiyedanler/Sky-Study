@@ -65,6 +65,7 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
               arrival: arrival || 'Bilinmiyor',
               duration: duration,
               xp: xpEarned,
+              status: 'completed',
               date: new Date().toISOString()
             });
             console.log('Uçuş başarıyla Firebase e kaydedildi.');
@@ -149,6 +150,27 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
     if (soundRef.current) {
       await soundRef.current.stopAsync();
     }
+    
+    if (user) {
+      try {
+        const [departure, arrival] = flightRoute.split('->').map(s => s.trim());
+        
+        await addDoc(collection(db, 'flights'), {
+          userId: user.uid,
+          userEmail: user.email || 'Anonim',
+          departure: departure || 'Bilinmiyor',
+          arrival: arrival || 'Bilinmiyor',
+          duration: duration,
+          xp: 0,
+          status: 'failed',
+          date: new Date().toISOString()
+        });
+        console.log('İptal edilen uçuş kaydedildi.');
+      } catch (error) {
+        console.error('İptal edilen uçuş kaydedilirken hata:', error);
+      }
+    }
+
     navigation.navigate('MainDrawer'); 
   };
 

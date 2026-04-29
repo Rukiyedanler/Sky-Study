@@ -7,7 +7,8 @@ import {
   ActivityIndicator, 
   ImageBackground,
   SafeAreaView,
-  TouchableOpacity
+  TouchableOpacity,
+  Platform
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { collection, getDocs } from 'firebase/firestore';
@@ -145,9 +146,11 @@ export default function LeaderboardScreen({ navigation }: any) {
                     <BlurView intensity={70} tint="dark" style={styles.panel}>
                         
                         <View style={styles.header}>
-                            <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ position: 'absolute', left: 0 }}>
-                                <Ionicons name="menu" size={32} color={theme.colors.text} />
-                            </TouchableOpacity>
+                            {Platform.OS !== 'web' && (
+                                <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ position: 'absolute', left: 0 }}>
+                                    <Ionicons name="menu" size={32} color={theme.colors.text} />
+                                </TouchableOpacity>
+                            )}
                             <Ionicons name="trophy" size={32} color="#FBBF24" style={{ marginRight: 8 }} />
                             <Text style={styles.title}>Liderlik Tablosu</Text>
                         </View>
@@ -233,7 +236,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
         marginBottom: theme.spacing.l,
     },
     listContent: {
-        paddingBottom: theme.spacing.l,
+        paddingBottom: Platform.OS === 'web' ? 130 : theme.spacing.l,
     },
     userRow: {
         flexDirection: 'row',
