@@ -31,6 +31,8 @@ export type DrawerParamList = {
 export type MainStackParamList = {
     MainDrawer: undefined;
     ActiveFlight: {
+        originId: string;
+        destId: string;
         route: string;
         duration: number;
     };

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useContext, useRef } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -10,16 +10,25 @@ import { db } from '../services/firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
 import { AuthContext } from '../context/AuthContext';
 import { Audio } from 'expo-av';
+import { CITIES } from '../data/cities';
+import MapComponent from '../components/MapComponent';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ActiveFlight'>;
 
-const isWeb = Platform.OS === 'web';
-
-// Helper function to format seconds into MM:SS
 const formatTime = (totalSeconds: number) => {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
+const calculateHeading = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const lat1Rad = lat1 * Math.PI / 180;
+  const lat2Rad = lat2 * Math.PI / 180;
+  const y = Math.sin(dLon) * Math.cos(lat2Rad);
+  const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+  const brng = Math.atan2(y, x) * 180 / Math.PI;
+  return (brng + 360) % 360;
 };
 
 export default function ActiveFlightScreen({ route, navigation }: Props) {
@@ -28,34 +37,36 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
   const { user } = useContext(AuthContext);
   const hasSavedRef = useRef(false);
 
-  const { route: flightRoute, duration } = route.params;
+  const { route: flightRoute, duration, originId, destId } = route.params;
+
+  const origin = useMemo(() => CITIES.find(c => c.id === originId), [originId]);
+  const dest = useMemo(() => CITIES.find(c => c.id === destId), [destId]);
 
   const totalSeconds = duration * 60;
   const [timeLeft, setTimeLeft] = useState(totalSeconds);
 
-  // Müzik state ve referansı
   const soundRef = useRef<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-
-  // Modal State
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isInfoPanelVisible, setIsInfoPanelVisible] = useState(false);
 
-  // İlerleme yüzdesi hesaplama
   const progressPercentage = ((totalSeconds - timeLeft) / totalSeconds) * 100;
+  const progressFraction = progressPercentage / 100;
+
+  const currentLat = origin && dest ? origin.lat + (dest.lat - origin.lat) * progressFraction : 0;
+  const currentLon = origin && dest ? origin.lon + (dest.lon - origin.lon) * progressFraction : 0;
+  const airplaneHeading = origin && dest ? calculateHeading(origin.lat, origin.lon, dest.lat, dest.lon) - 45 : 0;
 
   useEffect(() => {
-    // 0 olduğunda dur
     if (timeLeft <= 0) {
       if (hasSavedRef.current) return;
       hasSavedRef.current = true;
-
-      console.log('Uçuş Bitti!');
       setIsPlaying(false);
 
       const saveFlightAndNavigate = async () => {
         if (user) {
           try {
-            const [departure, arrival] = flightRoute.split('->').map(s => s.trim());
+            const [departure, arrival] = flightRoute.split('-').map(s => s.trim());
             const xpEarned = duration * 10;
             
             await addDoc(collection(db, 'flights'), {
@@ -68,7 +79,6 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
               status: 'completed',
               date: new Date().toISOString()
             });
-            console.log('Uçuş başarıyla Firebase e kaydedildi.');
           } catch (error) {
             console.error('Uçuş kaydedilirken hata:', error);
           }
@@ -80,21 +90,15 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
       return;
     }
 
-    // Modal açıksa sayacı duraklat
-    if (isModalVisible) {
-      return;
-    }
+    if (isModalVisible) return;
 
-    // Her saniye azalt
     const intervalId = setInterval(() => {
       setTimeLeft(prevTime => prevTime - 1);
     }, 1000);
 
-    // Unmount olduğunda veya yeniden render edildiğinde temizle
     return () => clearInterval(intervalId);
   }, [timeLeft, isModalVisible, flightRoute, duration, user, navigation]);
 
-  // Ses yükleme efekti
   useEffect(() => {
     async function loadAudio() {
       try {
@@ -103,8 +107,6 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
           staysActiveInBackground: true,
           shouldDuckAndroid: true,
         });
-
-        // Rahatlatıcı / Lo-fi Royalty Free Müzik
         const { sound } = await Audio.Sound.createAsync(
           { uri: 'https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3' },
           { shouldPlay: true, isLooping: true, volume: 0.4 }
@@ -116,12 +118,8 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
       }
     }
     loadAudio();
-
-    // Cleanup: Bileşen unmount olunca sesi belleğinden sil.
     return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-      }
+      if (soundRef.current) soundRef.current.unloadAsync();
     };
   }, []);
 
@@ -136,25 +134,16 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleEmergencyClick = () => {
-    setIsModalVisible(true);
-    // Müzik iframe'ini duraklatamıyoruz ancak sayacı durdurduk.
-  };
-
-  const handleCancelEmergency = () => {
-    setIsModalVisible(false);
-  };
+  const handleEmergencyClick = () => setIsModalVisible(true);
+  const handleCancelEmergency = () => setIsModalVisible(false);
 
   const handleConfirmEmergency = async () => {
     setIsModalVisible(false);
-    if (soundRef.current) {
-      await soundRef.current.stopAsync();
-    }
+    if (soundRef.current) await soundRef.current.stopAsync();
     
     if (user) {
       try {
-        const [departure, arrival] = flightRoute.split('->').map(s => s.trim());
-        
+        const [departure, arrival] = flightRoute.split('-').map(s => s.trim());
         await addDoc(collection(db, 'flights'), {
           userId: user.uid,
           userEmail: user.email || 'Anonim',
@@ -165,97 +154,102 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
           status: 'failed',
           date: new Date().toISOString()
         });
-        console.log('İptal edilen uçuş kaydedildi.');
       } catch (error) {
         console.error('İptal edilen uçuş kaydedilirken hata:', error);
       }
     }
-
     navigation.navigate('MainDrawer'); 
   };
 
   return (
-    <ImageBackground source={{ uri: theme.images.background }} style={styles.backgroundImage} resizeMode="cover">
-      <View style={styles.container}>
+    <View style={styles.mainContainer}>
+      {origin && dest && (
+        <MapComponent
+          origin={origin}
+          dest={dest}
+          currentLat={currentLat}
+          currentLon={currentLon}
+          airplaneHeading={airplaneHeading}
+          onAirplanePress={() => setIsInfoPanelVisible(true)}
+        />
+      )}
 
-        <BlurView intensity={60} tint="dark" style={styles.panel}>
-          <View style={styles.headerContainer}>
-            <Text style={styles.title}>Aktif Uçuş</Text>
-            <TouchableOpacity onPress={togglePlayback} style={styles.muteButton}>
-              <Ionicons name={isPlaying ? "pause-circle" : "play-circle"} size={36} color="#93C5FD" />
-            </TouchableOpacity>
-          </View>
-          
-          <Text style={styles.routeText}>{flightRoute}</Text>
-          
-          <View style={styles.timerContainer}>
-            <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
-          </View>
-
-          {/* İlerleme Çubuğu */}
-          <View style={styles.progressWrapper}>
-            <View style={styles.progressBarBackground}>
-              <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
-            </View>
-            <View style={[styles.airplaneIconContainer, { left: `${progressPercentage}%` }]}>
-              <Text style={styles.airplaneIcon}>✈️</Text>
-            </View>
-          </View>
-        </BlurView>
-
-        {/* Acil İniş Butonu */}
-        <TouchableOpacity style={styles.emergencyButton} onPress={handleEmergencyClick}>
-          <Text style={styles.emergencyButtonText}>Acil İniş (Uçuşu İptal Et)</Text>
-        </TouchableOpacity>
-
-        {/* Acil İniş Modalı */}
-        <Modal
-          visible={isModalVisible}
-          transparent={true}
-          animationType="fade"
-        >
-          <View style={styles.modalOverlay}>
-            <BlurView intensity={80} tint="dark" style={styles.modalContent}>
-              <Text style={styles.modalText}>Odaklanmayı bozup uçuşu iptal ediyorsunuz. Emin misiniz?</Text>
-              
-              <View style={styles.modalButtonsContainer}>
-                <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={handleCancelEmergency}>
-                  <Text style={styles.cancelButtonText}>Hayır, Devam Et</Text>
+      {/* Floating Info Panel */}
+      {isInfoPanelVisible && (
+        <View style={styles.overlayContainer} pointerEvents="box-none">
+          <BlurView intensity={80} tint="dark" style={styles.panel}>
+            <View style={styles.headerContainer}>
+              <Text style={styles.title}>Aktif Uçuş</Text>
+              <View style={styles.headerActions}>
+                <TouchableOpacity onPress={togglePlayback} style={styles.iconButton}>
+                  <Ionicons name={isPlaying ? "pause-circle" : "play-circle"} size={36} color="#93C5FD" />
                 </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handleConfirmEmergency}>
-                  <Text style={styles.confirmButtonText}>Evet, İptal Et</Text>
+                <TouchableOpacity onPress={() => setIsInfoPanelVisible(false)} style={styles.iconButton}>
+                  <Ionicons name="close-circle" size={36} color="#9CA3AF" />
                 </TouchableOpacity>
               </View>
-            </BlurView>
-          </View>
-        </Modal>
+            </View>
+            
+            <Text style={styles.routeText}>{flightRoute}</Text>
+            
+            <View style={styles.timerContainer}>
+              <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+            </View>
 
-      </View>
-    </ImageBackground>
+            <View style={styles.progressWrapper}>
+              <View style={styles.progressBarBackground}>
+                <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
+              </View>
+            </View>
+            
+            <TouchableOpacity style={styles.emergencyButton} onPress={handleEmergencyClick}>
+              <Text style={styles.emergencyButtonText}>Acil İniş (Uçuşu İptal Et)</Text>
+            </TouchableOpacity>
+          </BlurView>
+        </View>
+      )}
+
+      {/* Emergency Landing Modal */}
+      <Modal visible={isModalVisible} transparent={true} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={80} tint="dark" style={styles.modalContent}>
+            <Text style={styles.modalText}>Odaklanmayı bozup uçuşu iptal ediyorsunuz. Emin misiniz?</Text>
+            <View style={styles.modalButtonsContainer}>
+              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={handleCancelEmergency}>
+                <Text style={styles.cancelButtonText}>Hayır, Devam Et</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handleConfirmEmergency}>
+                <Text style={styles.confirmButtonText}>Evet, İptal Et</Text>
+              </TouchableOpacity>
+            </View>
+          </BlurView>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const createStyles = (theme: Theme) => StyleSheet.create({
-  backgroundImage: {
+  mainContainer: {
     flex: 1,
-    width: '100%',
-    height: '100%',
+    backgroundColor: '#0F172A',
   },
-  container: {
-    flex: 1,
+  overlayContainer: {
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing.xl,
-    position: 'relative',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    zIndex: 10,
   },
   panel: {
     width: '100%',
-    backgroundColor: 'rgba(31, 41, 55, 0.8)', 
+    maxWidth: 400,
+    backgroundColor: 'rgba(31, 41, 55, 0.85)', 
     borderRadius: theme.borderRadius.xl,
     padding: theme.spacing.xl,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     overflow: 'hidden',
   },
@@ -272,21 +266,26 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
   },
-  muteButton: {
+  headerActions: {
     position: 'absolute',
     right: 0,
-    padding: theme.spacing.s,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.s,
+  },
+  iconButton: {
+    padding: 2,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: theme.borderRadius.round,
   },
   routeText: {
     ...theme.typography.h2,
-    color: '#D1D5DB', // soft grey to look like subtitle
-    marginBottom: theme.spacing.xl,
+    color: '#D1D5DB', 
+    marginBottom: theme.spacing.l,
     textAlign: 'center',
   },
   timerContainer: {
-    marginVertical: theme.spacing.xl,
+    marginVertical: theme.spacing.l,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -295,11 +294,11 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     letterSpacing: 2,
-    fontVariant: ['tabular-nums'], // engellerin oynamaması için
+    fontVariant: ['tabular-nums'], 
   },
   progressWrapper: {
     width: '100%',
-    height: 40,
+    height: 10,
     justifyContent: 'center',
     marginVertical: theme.spacing.m,
   },
@@ -312,27 +311,19 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: theme.colors.accent, // Pastel Lila
+    backgroundColor: theme.colors.accent, 
     borderRadius: theme.borderRadius.round,
   },
-  airplaneIconContainer: {
-    position: 'absolute',
-    top: 0,
-    transform: [{ translateX: -15 }], // Center the icon over the progress point
-    width: 30,
-    alignItems: 'center',
-  },
-  airplaneIcon: {
-    fontSize: 24,
-  },
   emergencyButton: {
-    marginTop: theme.spacing.xxl,
+    marginTop: theme.spacing.xl,
     paddingVertical: theme.spacing.m,
     paddingHorizontal: theme.spacing.xl,
     borderWidth: 1,
     borderColor: '#FCA5A5', 
     borderRadius: theme.borderRadius.round,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    width: '100%',
+    alignItems: 'center',
   },
   emergencyButtonText: {
     color: '#F87171',
@@ -341,37 +332,39 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', 
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 20,
   },
   modalContent: {
-    width: '40%', // İyice daraltıldı
+    width: '80%',
+    maxWidth: 400,
     backgroundColor: 'rgba(31, 41, 55, 0.95)',
     borderRadius: theme.borderRadius.xl,
-    padding: theme.spacing.l, // İç boşluğu da genişlikle orantılı ufalttık
+    padding: theme.spacing.xl, 
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#374151',
     overflow: 'hidden',
   },
   modalText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: theme.spacing.l,
-    lineHeight: 24,
+    marginBottom: theme.spacing.xl,
+    lineHeight: 28,
   },
   modalButtonsContainer: {
     flexDirection: 'row',
     width: '100%',
-    gap: theme.spacing.s,
+    gap: theme.spacing.m,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 4, // Ekstra küçük padding
-    paddingHorizontal: 4,
+    paddingVertical: 12, 
+    paddingHorizontal: 8,
     borderRadius: theme.borderRadius.round,
     alignItems: 'center',
     justifyContent: 'center',
@@ -380,13 +373,13 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     backgroundColor: '#6EE7B7', 
   },
   cancelButtonText: {
-    color: '#064E3B', // Koyu yeşil metin
+    color: '#064E3B', 
     fontWeight: 'bold',
     fontSize: 16,
     textAlign: 'center',
   },
   confirmButton: {
-    backgroundColor: '#F4A261', // Pastel Turuncu
+    backgroundColor: '#F4A261', 
   },
   confirmButtonText: {
     color: '#FFFFFF',

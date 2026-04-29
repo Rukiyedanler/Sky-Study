@@ -319,6 +319,8 @@ export default function HomeScreen({ navigation }: Props) {
                       xp={activeFlight.xp}
                       onConfirm={() => {
                           navigation.navigate('ActiveFlight', {
+                              originId: activeFlight.origin.id,
+                              destId: activeFlight.dest.id,
                               route: `${activeFlight.origin.name} - ${activeFlight.dest.name}`,
                               duration: activeFlight.duration
                           });
