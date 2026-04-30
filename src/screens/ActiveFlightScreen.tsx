@@ -13,6 +13,7 @@ import { Audio } from 'expo-av';
 import { CITIES } from '../data/cities';
 import MapComponent from '../components/MapComponent';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ActiveFlight'>;
 
@@ -65,6 +66,16 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
       setIsPlaying(false);
 
       const saveFlightAndNavigate = async () => {
+        // Hedefe ulaşıldığında bildirimi tetikle
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "✈️ İniş Başarılı!",
+            body: "Hedefine ulaştın, tebrikler!",
+            sound: true,
+          },
+          trigger: null,
+        });
+
         if (user) {
           try {
             const [departure, arrival] = flightRoute.split('-').map(s => s.trim());
