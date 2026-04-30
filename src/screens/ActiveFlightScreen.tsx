@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useContext, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -12,6 +12,7 @@ import { AuthContext } from '../context/AuthContext';
 import { Audio } from 'expo-av';
 import { CITIES } from '../data/cities';
 import MapComponent from '../components/MapComponent';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ActiveFlight'>;
 
@@ -134,12 +135,43 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleEmergencyClick = () => setIsModalVisible(true);
+  const handleEmergencyClick = async () => {
+    try {
+      const today = new Date().toDateString();
+      const storedData = await AsyncStorage.getItem('@cancel_limit');
+      let cancelData = storedData ? JSON.parse(storedData) : { date: today, count: 0 };
+      
+      if (cancelData.date !== today) {
+        cancelData = { date: today, count: 0 };
+      }
+
+      if (cancelData.count >= 2) {
+        Alert.alert('İptal Limiti Doldu', 'Günde en fazla 2 kez uçuş iptal edebilirsiniz. Bu uçuşu tamamlamanız gerekiyor!');
+        return;
+      }
+      
+      setIsModalVisible(true);
+    } catch (error) {
+      console.error('Limit kontrol hatası', error);
+      setIsModalVisible(true);
+    }
+  };
   const handleCancelEmergency = () => setIsModalVisible(false);
 
   const handleConfirmEmergency = async () => {
     setIsModalVisible(false);
     if (soundRef.current) await soundRef.current.stopAsync();
+    
+    try {
+      const today = new Date().toDateString();
+      const storedData = await AsyncStorage.getItem('@cancel_limit');
+      let cancelData = storedData ? JSON.parse(storedData) : { date: today, count: 0 };
+      if (cancelData.date !== today) cancelData = { date: today, count: 0 };
+      cancelData.count += 1;
+      await AsyncStorage.setItem('@cancel_limit', JSON.stringify(cancelData));
+    } catch (e) {
+      console.error('İptal sayısı kaydedilemedi', e);
+    }
     
     if (user) {
       try {

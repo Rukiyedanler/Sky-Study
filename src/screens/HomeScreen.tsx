@@ -221,7 +221,10 @@ export default function HomeScreen({ navigation }: Props) {
 
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Kalkış Şehri</Text>
-                    <TouchableOpacity style={styles.selectorBtn} onPress={() => {
+                    <TouchableOpacity 
+                      style={[styles.selectorBtn, originCity && { opacity: 0.5 }]} 
+                      disabled={!!originCity}
+                      onPress={() => {
                         const durationNum = parseInt(targetDuration) || 0;
                         if (durationNum < 15) {
                             Alert.alert('Geçersiz Süre', 'Çarkı çevirmeden önce en az 15 dakikalık bir odaklanma süresi belirlemelisiniz.');
@@ -238,7 +241,8 @@ export default function HomeScreen({ navigation }: Props) {
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Varış Şehri</Text>
                     <TouchableOpacity 
-                       style={[styles.selectorBtn, !originCity && { opacity: 0.5 }]} 
+                       style={[styles.selectorBtn, (!originCity || activeFlight) && { opacity: 0.5 }]} 
+                       disabled={!originCity || !!activeFlight}
                        onPress={() => {
                           if (!originCity) {
                               Alert.alert('Hata', 'Önce Kalkış Noktasını belirleyin.');
