@@ -13,7 +13,7 @@ import { Audio } from 'expo-av';
 import { CITIES } from '../data/cities';
 import MapComponent from '../components/MapComponent';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
+import * as Haptics from 'expo-haptics';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ActiveFlight'>;
 
@@ -66,15 +66,7 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
       setIsPlaying(false);
 
       const saveFlightAndNavigate = async () => {
-        // Hedefe ulaşıldığında bildirimi tetikle
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "✈️ İniş Başarılı!",
-            body: "Hedefine ulaştın, tebrikler!",
-            sound: true,
-          },
-          trigger: null,
-        });
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         if (user) {
           try {
@@ -148,6 +140,7 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
 
   const handleEmergencyClick = async () => {
     try {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       const today = new Date().toDateString();
       const storedData = await AsyncStorage.getItem('@cancel_limit');
       let cancelData = storedData ? JSON.parse(storedData) : { date: today, count: 0 };

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import { Theme } from '../theme';
 import { useThemeContext } from '../context/ThemeContext';
 
@@ -57,7 +58,7 @@ export const Ticket: React.FC<TicketProps> = ({
       </View>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.confirmBtn} onPress={onConfirm} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.confirmBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onConfirm(); }} activeOpacity={0.8}>
           <Text style={styles.confirmText}>Bileti Kes</Text>
         </TouchableOpacity>
         

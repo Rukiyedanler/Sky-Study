@@ -27,8 +27,9 @@ import { CITIES, filterDestinations, calculateXP, City } from '../utils/flightLo
 import { Ticket } from '../components/Ticket';
 import { WheelSpinner } from '../components/WheelSpinner';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
-import type { DrawerParamList } from '../navigation/AppNavigator';
+import { DrawerParamList } from '../navigation/AppNavigator';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
 type HomeScreenNavigationProp = any;
 
@@ -107,6 +108,7 @@ export default function HomeScreen({ navigation }: Props) {
   );
 
   const showTicket = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Keyboard.dismiss();
     const durationNum = parseInt(targetDuration) || 0;
     if (durationNum < 15) {

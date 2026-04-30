@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Dimensions } from 'react-native';
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { Theme } from '../theme';
 import { useThemeContext } from '../context/ThemeContext';
 import { City } from '../utils/flightLogic';
@@ -58,8 +59,10 @@ export const WheelSpinner: React.FC<WheelSpinnerProps> = ({ title, subtitle, poo
      displayPool = [pool[0], pool[1], pool[2], pool[0], pool[1], pool[2]];
   }
 
-  const spin = () => {
+  const spin = async () => {
     if (pool.length === 0) return;
+    
+    await Haptics.selectionAsync();
     
     setIsSpinning(true);
     spinValue.setValue(0);
