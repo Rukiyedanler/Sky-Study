@@ -1,11 +1,13 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity } from 'react-native';
+import React, { useMemo, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { BlurView } from 'expo-blur';
 import LottieView from 'lottie-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 import { useThemeContext } from '../context/ThemeContext';
 import { Theme } from '../theme';
+import { Video, ResizeMode } from 'expo-av';
+import { fetchCityVideo } from '../services/pexelsService';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'LandingSuccess'>;
 
@@ -16,56 +18,125 @@ export default function LandingSuccessScreen({ route, navigation }: Props) {
   const { route: flightRoute, duration } = route.params;
   const targetCity = flightRoute.split('->').pop()?.trim() || "Hedef Nokta";
 
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadVideo = async () => {
+      setIsLoading(true);
+      const url = await fetchCityVideo(targetCity);
+      if (isMounted) {
+        setVideoUrl(url);
+        setIsLoading(false);
+      }
+    };
+
+    loadVideo();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [targetCity]);
+
   const handleReturnHome = () => {
     navigation.popToTop(); // Ana Ekrana dönüş
   };
 
   return (
-    <ImageBackground source={{ uri: theme.images.background }} style={styles.backgroundImage} resizeMode="cover">
-      
-      {/* Lottie Katmanı: Arka planın üstünde, interaktif alanların (panel) altında yer alır */}
-      <LottieView
-        source={require('../../assets/animations/confetti.json')}
-        autoPlay={true}
-        loop={false}
-        style={[StyleSheet.absoluteFillObject, { zIndex: 1 }]}
-        pointerEvents="none" // Buton tıklamalarını engellememesi için kritik
-      />
+    <View style={styles.mainContainer}>
+      {/* 4. Video Bileşeni */}
+      {videoUrl && !isLoading ? (
+        <Video
+          source={{ uri: videoUrl }}
+          style={StyleSheet.absoluteFillObject}
+          isMuted={true}
+          shouldPlay={true}
+          isLooping={true}
+          resizeMode={ResizeMode.COVER}
+        />
+      ) : (
+        <ImageBackground source={{ uri: theme.images.background }} style={styles.backgroundImage} resizeMode="cover" />
+      )}
 
-      <View style={[styles.container, { zIndex: 2 }]}>
-        <BlurView intensity={70} tint="dark" style={styles.panel}>
-          
-          <Text style={styles.successTitle}>İNİŞ BAŞARILI!</Text>
-          
-          <View style={styles.flightInfoContainer}>
-            <Text style={styles.routeText}>{flightRoute}</Text>
-            <Text style={styles.durationText}>{duration} Dakika Odaklanma Tamamlandı</Text>
+      {/* 5. Karartma Katmanı (Overlay) */}
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0, 0, 0, 0.4)' }]} />
+
+      {/* 3. Yüklenme (Loading) Durumu */}
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text style={styles.loadingText}>Gökyüzü manzarası yükleniyor...</Text>
+        </View>
+      )}
+
+      {!isLoading && (
+        <>
+          {/* Lottie Katmanı: Arka planın üstünde, interaktif alanların (panel) altında yer alır */}
+          <LottieView
+            source={require('../../assets/animations/confetti.json')}
+            autoPlay={true}
+            loop={false}
+            style={[StyleSheet.absoluteFillObject, { zIndex: 1 }]}
+            pointerEvents="none"
+          />
+
+          <View style={[styles.container, { zIndex: 2 }]}>
+            <BlurView intensity={70} tint="dark" style={styles.panel}>
+              
+              <Text style={styles.successTitle}>İNİŞ BAŞARILI!</Text>
+              
+              <View style={styles.flightInfoContainer}>
+                <Text style={styles.routeText}>{flightRoute}</Text>
+                <Text style={styles.durationText}>{duration} Dakika Odaklanma Tamamlandı</Text>
+              </View>
+              
+              <View style={styles.divider} />
+
+              <View style={styles.insightsContainer}>
+                 <Text style={styles.insightsHeader}>{targetCity} hakkında bir bilgi:</Text>
+                 <Text style={styles.insightsText}>
+                   (Buraya yapay zeka tarafından sağlanan ilginç bir kültürel bilgi veya motivasyon cümlesi gelecek.)
+                 </Text>
+              </View>
+
+              <TouchableOpacity style={styles.homeButton} onPress={handleReturnHome}>
+                 <Text style={styles.homeButtonText}>Yeni Bir Yolculuk Planla</Text>
+              </TouchableOpacity>
+
+            </BlurView>
           </View>
-          
-          <View style={styles.divider} />
-
-          <View style={styles.insightsContainer}>
-             <Text style={styles.insightsHeader}>{targetCity} hakkında bir bilgi:</Text>
-             <Text style={styles.insightsText}>
-               (Buraya yapay zeka tarafından sağlanan ilginç bir kültürel bilgi veya motivasyon cümlesi gelecek.)
-             </Text>
-          </View>
-
-          <TouchableOpacity style={styles.homeButton} onPress={handleReturnHome}>
-             <Text style={styles.homeButtonText}>Yeni Bir Yolculuk Planla</Text>
-          </TouchableOpacity>
-
-        </BlurView>
-      </View>
-    </ImageBackground>
+        </>
+      )}
+    </View>
   );
 }
 
 const createStyles = (theme: Theme) => StyleSheet.create({
-  backgroundImage: {
+  mainContainer: {
     flex: 1,
     width: '100%',
     height: '100%',
+    backgroundColor: theme.colors.background,
+  },
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  loadingText: {
+    ...theme.typography.body,
+    color: '#FFFFFF',
+    marginTop: theme.spacing.m,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   container: {
     flex: 1,
