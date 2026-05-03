@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ImageBackground, TouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
+import LottieView from 'lottie-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 import { useThemeContext } from '../context/ThemeContext';
@@ -21,7 +22,17 @@ export default function LandingSuccessScreen({ route, navigation }: Props) {
 
   return (
     <ImageBackground source={{ uri: theme.images.background }} style={styles.backgroundImage} resizeMode="cover">
-      <View style={styles.container}>
+      
+      {/* Lottie Katmanı: Arka planın üstünde, interaktif alanların (panel) altında yer alır */}
+      <LottieView
+        source={require('../../assets/animations/confetti.json')}
+        autoPlay={true}
+        loop={false}
+        style={[StyleSheet.absoluteFillObject, { zIndex: 1 }]}
+        pointerEvents="none" // Buton tıklamalarını engellememesi için kritik
+      />
+
+      <View style={[styles.container, { zIndex: 2 }]}>
         <BlurView intensity={70} tint="dark" style={styles.panel}>
           
           <Text style={styles.successTitle}>İNİŞ BAŞARILI!</Text>
