@@ -241,6 +241,14 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
             <TouchableOpacity style={styles.emergencyButton} onPress={handleEmergencyClick}>
               <Text style={styles.emergencyButtonText}>Acil İniş (Uçuşu İptal Et)</Text>
             </TouchableOpacity>
+
+            {/* SADECE TEST İÇİN: Hızlı Geçiş Butonu */}
+            <TouchableOpacity 
+              style={[styles.emergencyButton, { borderColor: '#4ADE80', backgroundColor: 'rgba(74, 222, 128, 0.15)', marginTop: 12 }]} 
+              onPress={() => setTimeLeft(0)}
+            >
+              <Text style={[styles.emergencyButtonText, { color: '#4ADE80' }]}>Test: Uçuşu Hemen Bitir</Text>
+            </TouchableOpacity>
           </BlurView>
         </View>
       )}
