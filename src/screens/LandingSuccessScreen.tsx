@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, ActivityIndicator, Platform, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
 import LottieView from 'lottie-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -8,6 +8,7 @@ import { useThemeContext } from '../context/ThemeContext';
 import { Theme } from '../theme';
 import { Video, ResizeMode } from 'expo-av';
 import { fetchCityVideo } from '../services/pexelsService';
+import { getRandomCityFact } from '../data/cityFacts';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'LandingSuccess'>;
 
@@ -20,6 +21,8 @@ export default function LandingSuccessScreen({ route, navigation }: Props) {
 
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const cityFact = useMemo(() => getRandomCityFact(targetCity), [targetCity]);
 
   useEffect(() => {
     let isMounted = true;
@@ -40,75 +43,99 @@ export default function LandingSuccessScreen({ route, navigation }: Props) {
     };
   }, [targetCity]);
 
+  const isWeb = Platform.OS === 'web';
+
   const handleReturnHome = () => {
-    navigation.popToTop(); // Ana Ekrana dönüş
+    // Tüm uçuş ve başarı sayfalarını bellekten silip ana ekrana sıfırlar
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainDrawer' }],
+    });
   };
 
-  return (
-    <View style={styles.mainContainer}>
-      {/* 4. Video Bileşeni */}
-      {videoUrl && !isLoading ? (
+  const renderContentPanel = () => (
+    <>
+      <BlurView intensity={70} tint="dark" style={styles.panel}>
+      <Text style={styles.successTitle}>İNİŞ BAŞARILI!</Text>
+      <View style={styles.flightInfoContainer}>
+        <Text style={styles.routeText}>{flightRoute}</Text>
+        <Text style={styles.durationText}>{duration} Dakika Odaklanma Tamamlandı</Text>
+      </View>
+      <View style={styles.divider} />
+      <View style={styles.insightsContainer}>
+         <Text style={styles.insightsHeader}>{targetCity} hakkında bir bilgi:</Text>
+         <Text style={styles.insightsText}>{cityFact}</Text>
+      </View>
+    </BlurView>
+    <TouchableOpacity style={styles.homeButton} onPress={handleReturnHome} activeOpacity={0.7}>
+       <Text style={styles.homeButtonText}>Yeni Bir Yolculuk Planla</Text>
+    </TouchableOpacity>
+  </>);
+
+  const renderVideo = () => {
+    if (videoUrl && !isLoading) {
+      return (
         <Video
-          source={{ uri: videoUrl }}
-          style={StyleSheet.absoluteFillObject}
+          source={{ 
+            uri: videoUrl,
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+              "Referer": "https://www.pexels.com/"
+            }
+          }}
+          style={styles.videoElement}
           isMuted={true}
           shouldPlay={true}
           isLooping={true}
           resizeMode={ResizeMode.COVER}
+          onError={(error) => {
+            console.warn("Video yüklenemedi (CORS veya bağlantı hatası):", error);
+            setVideoUrl(null);
+          }}
         />
-      ) : (
-        <ImageBackground source={{ uri: theme.images.background }} style={styles.backgroundImage} resizeMode="cover" />
-      )}
+      );
+    }
+    return (
+      <ImageBackground source={{ uri: theme.images.background }} style={styles.videoElement} resizeMode="cover" />
+    );
+  };
 
-      {/* 5. Karartma Katmanı (Overlay) */}
-      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0, 0, 0, 0.4)' }]} />
-
-      {/* 3. Yüklenme (Loading) Durumu */}
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text style={styles.loadingText}>Gökyüzü manzarası yükleniyor...</Text>
-        </View>
-      )}
-
+  return (
+    <View style={styles.mainContainer}>
+      {/* Arka plan konfetileri (Sabit kalması için ScrollView dışında) */}
       {!isLoading && (
-        <>
-          {/* Lottie Katmanı: Arka planın üstünde, interaktif alanların (panel) altında yer alır */}
-          <LottieView
+        <LottieView
             source={require('../../assets/animations/confetti.json')}
             autoPlay={true}
             loop={false}
-            style={[StyleSheet.absoluteFillObject, { zIndex: 1 }]}
+            style={[StyleSheet.absoluteFillObject, { zIndex: 0 }]}
             pointerEvents="none"
-          />
-
-          <View style={[styles.container, { zIndex: 2 }]}>
-            <BlurView intensity={70} tint="dark" style={styles.panel}>
-              
-              <Text style={styles.successTitle}>İNİŞ BAŞARILI!</Text>
-              
-              <View style={styles.flightInfoContainer}>
-                <Text style={styles.routeText}>{flightRoute}</Text>
-                <Text style={styles.durationText}>{duration} Dakika Odaklanma Tamamlandı</Text>
-              </View>
-              
-              <View style={styles.divider} />
-
-              <View style={styles.insightsContainer}>
-                 <Text style={styles.insightsHeader}>{targetCity} hakkında bir bilgi:</Text>
-                 <Text style={styles.insightsText}>
-                   (Buraya yapay zeka tarafından sağlanan ilginç bir kültürel bilgi veya motivasyon cümlesi gelecek.)
-                 </Text>
-              </View>
-
-              <TouchableOpacity style={styles.homeButton} onPress={handleReturnHome}>
-                 <Text style={styles.homeButtonText}>Yeni Bir Yolculuk Planla</Text>
-              </TouchableOpacity>
-
-            </BlurView>
-          </View>
-        </>
+        />
       )}
+
+      <ScrollView 
+        style={{ flex: 1, zIndex: 10 }} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Üst Kısım: Video */}
+        <View style={styles.topSection}>
+          {isLoading ? (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#3B82F6" />
+              <Text style={styles.loadingText}>Gökyüzü manzarası yükleniyor...</Text>
+            </View>
+          ) : (
+            renderVideo()
+          )}
+        </View>
+
+        {/* Alt Kısım: Panel (Sayfayı aşağı kaydırınca görünür) */}
+        <View style={styles.bottomSection}>
+           {!isLoading && renderContentPanel()}
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -116,12 +143,37 @@ export default function LandingSuccessScreen({ route, navigation }: Props) {
 const createStyles = (theme: Theme) => StyleSheet.create({
   mainContainer: {
     flex: 1,
+    backgroundColor: '#0F172A', // Tüm platformlarda şık koyu lacivert arka plan
+  },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.m,
+  },
+  topSection: {
+    width: '100%',
+    maxWidth: 600,
+    height: 450, // Videonun yüksekliği (Mobilde ekranın yarısı kadar yer kaplar)
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: theme.borderRadius.xl,
+    overflow: 'hidden',
+    marginBottom: theme.spacing.xl,
+    zIndex: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  videoElement: {
     width: '100%',
     height: '100%',
-    backgroundColor: theme.colors.background,
   },
-  backgroundImage: {
-    ...StyleSheet.absoluteFillObject,
+  bottomSection: {
+    width: '100%',
+    maxWidth: 600,
+    zIndex: 2,
+    paddingBottom: theme.spacing.xl,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -215,11 +267,13 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     borderRadius: theme.borderRadius.round,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
+    elevation: 6, // Mobilde tıklanabilirliği artırmak için gölge
     shadowColor: '#3B82F6',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
+    marginTop: theme.spacing.xl, // BlurView dışında olduğu için üstten boşluk
+    zIndex: 100, // En üstte olması için
   },
   homeButtonText: {
     color: '#FFFFFF',

@@ -2,6 +2,8 @@ export interface PexelsVideoFile {
   id: number;
   quality: string;
   file_type: string;
+  width: number;
+  height: number;
   link: string;
 }
 
@@ -17,7 +19,9 @@ export interface PexelsResponse {
 }
 
 const FALLBACK_QUERY = 'beautiful clouds sky';
-const TIMEOUT_MS = 8000; // 8 seconds timeout to prevent hanging
+const TIMEOUT_MS = 8000;
+const ULTIMATE_FALLBACK_VIDEO = "https://videos.pexels.com/video-files/3121459/3121459-hd_1080_1920_24fps.mp4"; // Harika bir gökyüzü videosu (sabit link)
+const ISTANBUL_VIP_VIDEO = "https://videos.pexels.com/video-files/34234127/14508448_1080_1920_60fps.mp4"; // Webtekno kalitesinde Istanbul Boğazı havadan çekim
 
 const fetchWithTimeout = async (url: string, options: RequestInit): Promise<Response> => {
   const controller = new AbortController();
@@ -39,23 +43,28 @@ const fetchWithTimeout = async (url: string, options: RequestInit): Promise<Resp
 const extractBestVideoUrl = (videos: PexelsVideo[]): string | null => {
   if (!videos || videos.length === 0) return null;
 
-  // Videolardan rastgele birini seç ki hep aynı videoyu göstermesin (per_page=3)
-  const randomVideo = videos[Math.floor(Math.random() * videos.length)];
-  
-  if (!randomVideo.video_files || randomVideo.video_files.length === 0) return null;
+  // Rastgele sıraya diz (hep aynı videoyu göstermemek için)
+  const shuffledVideos = [...videos].sort(() => 0.5 - Math.random());
 
-  // mp4 olanları filtrele
-  const mp4Files = randomVideo.video_files.filter(f => f.file_type === 'video/mp4');
-  if (mp4Files.length === 0) return null;
+  for (const video of shuffledVideos) {
+    if (!video.video_files || video.video_files.length === 0) continue;
 
-  // Öncelik HD, yoksa SD
-  const hdVideo = mp4Files.find(f => f.quality === 'hd');
-  if (hdVideo) return hdVideo.link;
+    const mp4Files = video.video_files.filter(f => f.file_type === 'video/mp4' && f.height);
+    if (mp4Files.length === 0) continue;
 
-  const sdVideo = mp4Files.find(f => f.quality === 'sd');
-  if (sdVideo) return sdVideo.link;
+    // Çözünürlüğe (height) göre sırala (Büyükten küçüğe)
+    const sortedMp4s = mp4Files.sort((a, b) => b.height - a.height);
 
-  return mp4Files[0].link;
+    // 4K (UHD) videolar Web tarayıcılarında veya eski cihazlarda kasma/siyah ekran yapar.
+    // Bu yüzden yüksekliği 960px ile 1920px (1080p/720p) arasında olan en iyi videoyu buluyoruz.
+    const optimalVideo = sortedMp4s.find(f => f.height <= 1920 && f.height >= 960);
+    if (optimalVideo) return optimalVideo.link;
+
+    // Eğer optimal çözünürlük yoksa, eldeki en iyi (en yüksek çözünürlüklü) mp4'ü döndür
+    return sortedMp4s[0].link;
+  }
+
+  return null; // Hiçbir videoda geçerli mp4 yoksa
 };
 
 export const fetchCityVideo = async (cityName: string): Promise<string | null> => {
@@ -67,8 +76,17 @@ export const fetchCityVideo = async (cityName: string): Promise<string | null> =
   }
 
   try {
-    const query = `${cityName} city aerial`;
-    const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&orientation=portrait&size=medium&per_page=3`;
+    // Şehir ismini temizle (ör. "İSTANBUL (SAW)" -> "ISTANBUL")
+    const cleanCityName = cityName.replace(' (SAW)', '').trim();
+    
+    // İSTANBUL İÇİN VIP KONTROLÜ (Kusursuz, sabitlenmiş video)
+    if (cleanCityName === 'İSTANBUL' || cleanCityName === 'ISTANBUL') {
+      return ISTANBUL_VIP_VIDEO;
+    }
+
+    // city aerial araması bazı küçük şehirlerde sonuç vermeyebiliyor, bu yüzden daha genel bir arama yapıyoruz.
+    const query = `${cleanCityName} city`;
+    const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&orientation=portrait&size=medium&per_page=5`;
 
     const response = await fetchWithTimeout(url, {
       method: 'GET',
@@ -97,12 +115,12 @@ export const fetchCityVideo = async (cityName: string): Promise<string | null> =
 };
 
 // Fallback (Yedek) video çağıran fonksiyon
-const getFallbackVideo = async (): Promise<string | null> => {
+const getFallbackVideo = async (): Promise<string> => {
   const apiKey = process.env.EXPO_PUBLIC_PEXELS_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) return ULTIMATE_FALLBACK_VIDEO;
 
   try {
-    const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(FALLBACK_QUERY)}&orientation=portrait&size=medium&per_page=3`;
+    const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(FALLBACK_QUERY)}&orientation=portrait&size=medium&per_page=5`;
     const response = await fetchWithTimeout(url, {
       method: 'GET',
       headers: {
@@ -110,12 +128,16 @@ const getFallbackVideo = async (): Promise<string | null> => {
       },
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.warn('Pexels API Fallback Failed (Rate Limit vb.), using static fallback link.');
+      return ULTIMATE_FALLBACK_VIDEO;
+    }
 
     const data: PexelsResponse = await response.json();
-    return extractBestVideoUrl(data.videos);
+    const bestUrl = extractBestVideoUrl(data.videos);
+    return bestUrl || ULTIMATE_FALLBACK_VIDEO;
   } catch (error) {
-    console.error('Fallback video also failed:', error);
-    return null;
+    console.error('Fallback video also failed, using static fallback link:', error);
+    return ULTIMATE_FALLBACK_VIDEO;
   }
 };
