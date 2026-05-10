@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export interface PexelsVideoFile {
   id: number;
   quality: string;
@@ -21,7 +23,9 @@ export interface PexelsResponse {
 const FALLBACK_QUERY = 'beautiful clouds sky';
 const TIMEOUT_MS = 8000;
 const ULTIMATE_FALLBACK_VIDEO = "https://videos.pexels.com/video-files/3121459/3121459-hd_1080_1920_24fps.mp4"; // Harika bir gökyüzü videosu (sabit link)
-const ISTANBUL_VIP_VIDEO = "https://videos.pexels.com/video-files/34234127/14508448_1080_1920_60fps.mp4"; // Webtekno kalitesinde Istanbul Boğazı havadan çekim
+const ULTIMATE_FALLBACK_VIDEO_WEB = "https://videos.pexels.com/video-files/855029/855029-hd_1920_1080_30fps.mp4"; // Web için yatay bulut
+const ISTANBUL_VIP_VIDEO = "https://videos.pexels.com/video-files/34234127/14508448_1080_1920_60fps.mp4"; // Webtekno kalitesinde Istanbul Boğazı havadan çekim (Dikey)
+const ISTANBUL_VIP_VIDEO_WEB = "https://videos.pexels.com/video-files/34433049/14589133_1920_1080_24fps.mp4"; // Yatay Istanbul Boğazı
 
 const fetchWithTimeout = async (url: string, options: RequestInit): Promise<Response> => {
   const controller = new AbortController();
@@ -81,12 +85,13 @@ export const fetchCityVideo = async (cityName: string): Promise<string | null> =
     
     // İSTANBUL İÇİN VIP KONTROLÜ (Kusursuz, sabitlenmiş video)
     if (cleanCityName === 'İSTANBUL' || cleanCityName === 'ISTANBUL') {
-      return ISTANBUL_VIP_VIDEO;
+      return Platform.OS === 'web' ? ISTANBUL_VIP_VIDEO_WEB : ISTANBUL_VIP_VIDEO;
     }
 
     // city aerial araması bazı küçük şehirlerde sonuç vermeyebiliyor, bu yüzden daha genel bir arama yapıyoruz.
     const query = `${cleanCityName} city`;
-    const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&orientation=portrait&size=medium&per_page=5`;
+    const orientation = Platform.OS === 'web' ? 'landscape' : 'portrait';
+    const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&orientation=${orientation}&size=medium&per_page=5`;
 
     const response = await fetchWithTimeout(url, {
       method: 'GET',
@@ -117,10 +122,13 @@ export const fetchCityVideo = async (cityName: string): Promise<string | null> =
 // Fallback (Yedek) video çağıran fonksiyon
 const getFallbackVideo = async (): Promise<string> => {
   const apiKey = process.env.EXPO_PUBLIC_PEXELS_API_KEY;
-  if (!apiKey) return ULTIMATE_FALLBACK_VIDEO;
+  const staticFallback = Platform.OS === 'web' ? ULTIMATE_FALLBACK_VIDEO_WEB : ULTIMATE_FALLBACK_VIDEO;
+  
+  if (!apiKey) return staticFallback;
 
   try {
-    const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(FALLBACK_QUERY)}&orientation=portrait&size=medium&per_page=5`;
+    const orientation = Platform.OS === 'web' ? 'landscape' : 'portrait';
+    const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(FALLBACK_QUERY)}&orientation=${orientation}&size=medium&per_page=5`;
     const response = await fetchWithTimeout(url, {
       method: 'GET',
       headers: {
@@ -130,14 +138,14 @@ const getFallbackVideo = async (): Promise<string> => {
 
     if (!response.ok) {
       console.warn('Pexels API Fallback Failed (Rate Limit vb.), using static fallback link.');
-      return ULTIMATE_FALLBACK_VIDEO;
+      return staticFallback;
     }
 
     const data: PexelsResponse = await response.json();
     const bestUrl = extractBestVideoUrl(data.videos);
-    return bestUrl || ULTIMATE_FALLBACK_VIDEO;
+    return bestUrl || staticFallback;
   } catch (error) {
     console.error('Fallback video also failed, using static fallback link:', error);
-    return ULTIMATE_FALLBACK_VIDEO;
+    return staticFallback;
   }
 };

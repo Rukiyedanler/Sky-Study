@@ -76,13 +76,17 @@ export default function LandingSuccessScreen({ route, navigation }: Props) {
     if (videoUrl && !isLoading) {
       return (
         <Video
-          source={{ 
-            uri: videoUrl,
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-              "Referer": "https://www.pexels.com/"
-            }
-          }}
+          source={
+            Platform.OS === 'web' 
+              ? { uri: videoUrl }
+              : { 
+                  uri: videoUrl,
+                  headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                    "Referer": "https://www.pexels.com/"
+                  }
+                }
+          }
           style={styles.videoElement}
           isMuted={true}
           shouldPlay={true}
@@ -114,7 +118,7 @@ export default function LandingSuccessScreen({ route, navigation }: Props) {
       )}
 
       <ScrollView 
-        style={{ flex: 1, zIndex: 10 }} 
+        style={[StyleSheet.absoluteFillObject, { zIndex: 10 }]} 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
