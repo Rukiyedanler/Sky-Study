@@ -16,8 +16,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { Dimensions, useWindowDimensions } from 'react-native';
 
-// Videoyu en üstte statik olarak require edelim
+// Videoları statik olarak require edelim
 const acilInisVideo = require('../assets/videos/acil_cıkıs.mp4');
+const boardingVideo = require('../assets/ucaga_binis.mp4');
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ActiveFlight'>;
 
@@ -57,6 +58,7 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isInfoPanelVisible, setIsInfoPanelVisible] = useState(false);
   const [isEmergencyVideoPlaying, setIsEmergencyVideoPlaying] = useState(false);
+  const [isBoardingVideoPlaying, setIsBoardingVideoPlaying] = useState(true);
 
   const progressPercentage = ((totalSeconds - timeLeft) / totalSeconds) * 100;
   const progressFraction = progressPercentage / 100;
@@ -253,6 +255,37 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           </View>
         </View>
+      )}
+
+      {/* Boarding Video Overlay - Uçuşa başlamadan önce (Sayfa ilk açıldığında) oynar */}
+      {isBoardingVideoPlaying && (
+        <ImageBackground 
+          source={{ uri: theme.images.background }} 
+          style={{ position: 'absolute', top: 0, left: 0, width: windowWidth, height: windowHeight, zIndex: 1000, justifyContent: 'center', alignItems: 'center' }}
+          resizeMode="cover"
+        >
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} />
+          
+          <View style={{ width: '90%', maxWidth: 800, aspectRatio: 16/9, backgroundColor: 'transparent', borderRadius: 20, overflow: 'hidden', alignSelf: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 10}, shadowOpacity: 0.5, shadowRadius: 20, elevation: 15 }}>
+            <Video
+              source={boardingVideo}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay={true}
+              isMuted={true}
+              isLooping={false}
+              onError={(error) => {
+                console.warn('Biniş videosu yüklenemedi:', error);
+                setIsBoardingVideoPlaying(false); // Hata olursa direkt akışa geç
+              }}
+              onPlaybackStatusUpdate={(status) => {
+                if (status.isLoaded && status.didJustFinish) {
+                  setIsBoardingVideoPlaying(false); // Video bitince akışa geç
+                }
+              }}
+            />
+          </View>
+        </ImageBackground>
       )}
 
       {/* Emergency Video Overlay - KESİN ÇÖZÜM: Kutu içine hapsedip ortalama */}
