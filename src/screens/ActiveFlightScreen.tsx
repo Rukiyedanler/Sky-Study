@@ -9,11 +9,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { db } from '../services/firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
 import { AuthContext } from '../context/AuthContext';
-import { Audio } from 'expo-av';
+import { Audio, Video, ResizeMode } from 'expo-av';
 import { CITIES } from '../data/cities';
 import MapComponent from '../components/MapComponent';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import { Dimensions, useWindowDimensions } from 'react-native';
+
+// Videoyu en üstte statik olarak require edelim
+const acilInisVideo = require('../assets/videos/acil_inis.mp4');
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ActiveFlight'>;
 
@@ -36,6 +40,7 @@ const calculateHeading = (lat1: number, lon1: number, lat2: number, lon2: number
 export default function ActiveFlightScreen({ route, navigation }: Props) {
   const { theme } = useThemeContext();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const { user } = useContext(AuthContext);
   const hasSavedRef = useRef(false);
 
@@ -51,6 +56,7 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isInfoPanelVisible, setIsInfoPanelVisible] = useState(false);
+  const [isEmergencyVideoPlaying, setIsEmergencyVideoPlaying] = useState(false);
 
   const progressPercentage = ((totalSeconds - timeLeft) / totalSeconds) * 100;
   const progressFraction = progressPercentage / 100;
@@ -138,63 +144,58 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleEmergencyClick = async () => {
-    try {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      const today = new Date().toDateString();
-      const storedData = await AsyncStorage.getItem('@cancel_limit');
-      let cancelData = storedData ? JSON.parse(storedData) : { date: today, count: 0 };
-      
-      if (cancelData.date !== today) {
-        cancelData = { date: today, count: 0 };
-      }
-
-      if (cancelData.count >= 2) {
-        Alert.alert('İptal Limiti Doldu', 'Günde en fazla 2 kez uçuş iptal edebilirsiniz. Bu uçuşu tamamlamanız gerekiyor!');
-        return;
-      }
-      
-      setIsModalVisible(true);
-    } catch (error) {
-      console.error('Limit kontrol hatası', error);
-      setIsModalVisible(true);
-    }
+  const handleEmergencyClick = () => {
+    // Senkron olarak modal'ı anında aç (async/await yüzünden sessizce çökme ihtimalini yok ettik)
+    setIsModalVisible(true);
   };
+
   const handleCancelEmergency = () => setIsModalVisible(false);
 
-  const handleConfirmEmergency = async () => {
+  const handleConfirmEmergency = () => {
+    // 1. Modalı Anında Kapat
     setIsModalVisible(false);
-    if (soundRef.current) await soundRef.current.stopAsync();
+
+    // 2. Müziği durdur (hata verirse yoksay)
+    if (soundRef.current) {
+      soundRef.current.stopAsync().catch(() => {});
+    }
+    setIsPlaying(false);
     
-    try {
+    // 3. Videoyu ANINDA başlat
+    setIsEmergencyVideoPlaying(true);
+  };
+
+  const executeFinalCancellation = () => {
+    // 1. AsyncStorage işlemini arka planda yap (akışı asla durdurmasın)
+    AsyncStorage.getItem('@cancel_limit').then(storedData => {
       const today = new Date().toDateString();
-      const storedData = await AsyncStorage.getItem('@cancel_limit');
       let cancelData = storedData ? JSON.parse(storedData) : { date: today, count: 0 };
       if (cancelData.date !== today) cancelData = { date: today, count: 0 };
+      
       cancelData.count += 1;
-      await AsyncStorage.setItem('@cancel_limit', JSON.stringify(cancelData));
-    } catch (e) {
-      console.error('İptal sayısı kaydedilemedi', e);
+      AsyncStorage.setItem('@cancel_limit', JSON.stringify(cancelData)).catch(() => {});
+    }).catch(e => console.warn('Limit okuma hatası:', e));
+    
+    // 2. Firebase işlemini arka planda yap (fire-and-forget)
+    if (user) {
+      const [departure, arrival] = flightRoute.split('-').map(s => s.trim());
+      addDoc(collection(db, 'flights'), {
+        userId: user.uid,
+        userEmail: user.email || 'Anonim',
+        departure: departure || 'Bilinmiyor',
+        arrival: arrival || 'Bilinmiyor',
+        duration: duration,
+        xp: 0,
+        status: 'failed',
+        date: new Date().toISOString()
+      }).catch(error => console.warn('Firebase iptal kaydı hatası:', error));
     }
     
-    if (user) {
-      try {
-        const [departure, arrival] = flightRoute.split('-').map(s => s.trim());
-        await addDoc(collection(db, 'flights'), {
-          userId: user.uid,
-          userEmail: user.email || 'Anonim',
-          departure: departure || 'Bilinmiyor',
-          arrival: arrival || 'Bilinmiyor',
-          duration: duration,
-          xp: 0,
-          status: 'failed',
-          date: new Date().toISOString()
-        });
-      } catch (error) {
-        console.error('İptal edilen uçuş kaydedilirken hata:', error);
-      }
-    }
-    navigation.navigate('MainDrawer'); 
+    // 3. ANINDA ANA EKRANA DÖN! Hiçbir promise beklenmiyor.
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainDrawer' }],
+    });
   };
 
   return (
@@ -212,8 +213,8 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
 
       {/* Floating Info Panel */}
       {isInfoPanelVisible && (
-        <View style={styles.overlayContainer} pointerEvents="box-none">
-          <BlurView intensity={80} tint="dark" style={styles.panel}>
+        <View style={styles.overlayContainer}>
+          <View style={[styles.panel, { backgroundColor: 'rgba(31, 41, 55, 0.95)' }]}>
             <View style={styles.headerContainer}>
               <Text style={styles.title}>Aktif Uçuş</Text>
               <View style={styles.headerActions}>
@@ -237,38 +238,64 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
                 <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
               </View>
             </View>
-            
-            <TouchableOpacity style={styles.emergencyButton} onPress={handleEmergencyClick}>
+
+            <TouchableOpacity style={[styles.emergencyButton, { elevation: 6, zIndex: 100 }]} onPress={handleEmergencyClick} activeOpacity={0.7}>
               <Text style={styles.emergencyButtonText}>Acil İniş (Uçuşu İptal Et)</Text>
             </TouchableOpacity>
 
             {/* SADECE TEST İÇİN: Hızlı Geçiş Butonu */}
             <TouchableOpacity 
-              style={[styles.emergencyButton, { borderColor: '#4ADE80', backgroundColor: 'rgba(74, 222, 128, 0.15)', marginTop: 12 }]} 
+              style={[styles.emergencyButton, { borderColor: '#4ADE80', backgroundColor: 'rgba(74, 222, 128, 0.15)', marginTop: 12, elevation: 6, zIndex: 100 }]} 
               onPress={() => setTimeLeft(0)}
+              activeOpacity={0.7}
             >
               <Text style={[styles.emergencyButtonText, { color: '#4ADE80' }]}>Test: Uçuşu Hemen Bitir</Text>
             </TouchableOpacity>
-          </BlurView>
+          </View>
         </View>
       )}
 
-      {/* Emergency Landing Modal */}
-      <Modal visible={isModalVisible} transparent={true} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <BlurView intensity={80} tint="dark" style={styles.modalContent}>
+      {/* Emergency Video Overlay - KESİN ÇÖZÜM: Pixel bazlı zorlama (Crash fix) */}
+      {isEmergencyVideoPlaying && (
+        <View style={{ position: 'absolute', top: 0, left: 0, width: windowWidth, height: windowHeight, backgroundColor: '#000', zIndex: 1000, elevation: 100 }}>
+          <Video
+            source={acilInisVideo}
+            style={{ width: windowWidth, height: windowHeight }}
+            resizeMode={ResizeMode.COVER}
+            shouldPlay={true}
+            isMuted={true}
+            isLooping={false}
+            onError={(error) => {
+              console.error('Video yüklenemedi:', error);
+              setIsEmergencyVideoPlaying(false);
+              executeFinalCancellation(); // Video çökerse akışa devam et
+            }}
+            onPlaybackStatusUpdate={(status) => {
+              if (status.isLoaded && status.didJustFinish) {
+                setIsEmergencyVideoPlaying(false);
+                executeFinalCancellation();
+              }
+            }}
+          />
+        </View>
+      )}
+
+      {/* Emergency Landing Modal - Native Modal yerine Web ile %100 uyumlu Absolute View kullanıldı */}
+      {isModalVisible && (
+        <View style={[StyleSheet.absoluteFillObject, styles.modalOverlay, { zIndex: 200 }]}>
+          <View style={[styles.modalContent, { backgroundColor: 'rgba(31, 41, 55, 0.98)' }]}>
             <Text style={styles.modalText}>Odaklanmayı bozup uçuşu iptal ediyorsunuz. Emin misiniz?</Text>
             <View style={styles.modalButtonsContainer}>
-              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={handleCancelEmergency}>
+              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={handleCancelEmergency} activeOpacity={0.7}>
                 <Text style={styles.cancelButtonText}>Hayır, Devam Et</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handleConfirmEmergency}>
+              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handleConfirmEmergency} activeOpacity={0.7}>
                 <Text style={styles.confirmButtonText}>Evet, İptal Et</Text>
               </TouchableOpacity>
             </View>
-          </BlurView>
+          </View>
         </View>
-      </Modal>
+      )}
     </View>
   );
 }

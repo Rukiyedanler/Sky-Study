@@ -56,10 +56,10 @@ export default function HomeScreen({ navigation }: Props) {
   // Modals
   const [isRefundModalVisible, setRefundModalVisible] = useState(false);
 
-  // Recent Flights
   const [recentFlights, setRecentFlights] = useState<any[]>([]);
   const [loadingFlights, setLoadingFlights] = useState(false);
   const [totalXP, setTotalXP] = useState<number>(0);
+  const [flightError, setFlightError] = useState<string | null>(null);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -68,32 +68,32 @@ export default function HomeScreen({ navigation }: Props) {
         if (!user) return;
         setLoadingFlights(true);
         try {
-          const q = query(
-            collection(db, 'flights'),
-            where('userId', '==', user.uid),
-            orderBy('date', 'desc'),
-            limit(5)
-          );
-          const querySnapshot = await getDocs(q);
-          const flights: any[] = [];
-          querySnapshot.forEach((doc) => {
-            flights.push({ id: doc.id, ...doc.data() });
-          });
-
-          // Toplam XP hesaplama
+          // Tüm uçuşları tek bir sorguyla çek (Firebase Composite Index hatasından kaçınmak için orderBy kullanmıyoruz)
           const qAll = query(collection(db, 'flights'), where('userId', '==', user.uid));
           const allSnapshot = await getDocs(qAll);
+          
           let sumXP = 0;
+          const allFlights: any[] = [];
+          
           allSnapshot.forEach(doc => {
-            sumXP += (doc.data().xp || 0);
+            const data = doc.data();
+            sumXP += (data.xp || 0);
+            allFlights.push({ id: doc.id, ...data });
           });
 
+          // Tarihe göre JavaScript tarafında yeniden eskiye doğru sırala
+          allFlights.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
           if (isActive) {
-            setRecentFlights(flights);
+            setRecentFlights(allFlights.slice(0, 5));
             setTotalXP(sumXP);
+            setFlightError(null);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error("Uçuşlar çekilirken hata:", error);
+          if (isActive) {
+            setFlightError(error.message || 'Veritabanı bağlantı hatası');
+          }
         } finally {
           if (isActive) setLoadingFlights(false);
         }
@@ -286,6 +286,10 @@ export default function HomeScreen({ navigation }: Props) {
                   
                   {loadingFlights ? (
                     <Text style={styles.emptyFlightsText}>Uçuşlar yükleniyor...</Text>
+                  ) : flightError ? (
+                    <BlurView intensity={30} tint="dark" style={[styles.emptyFlightsCard, { borderColor: '#EF4444' }]}>
+                      <Text style={[styles.emptyFlightsText, { color: '#EF4444' }]}>Hata: {flightError}</Text>
+                    </BlurView>
                   ) : recentFlights.length === 0 ? (
                     <BlurView intensity={30} tint="dark" style={styles.emptyFlightsCard}>
                       <Text style={styles.emptyFlightsText}>Henüz bir uçuş yapmadınız, hemen planla!</Text>
