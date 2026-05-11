@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useContext, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, ImageBackground } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -17,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { Dimensions, useWindowDimensions } from 'react-native';
 
 // Videoyu en üstte statik olarak require edelim
-const acilInisVideo = require('../assets/videos/acil_inis.mp4');
+const acilInisVideo = require('../assets/videos/acil_cıkıs.mp4');
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ActiveFlight'>;
 
@@ -255,13 +255,21 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {/* Emergency Video Overlay - KESİN ÇÖZÜM: Pixel bazlı zorlama (Crash fix) */}
+      {/* Emergency Video Overlay - KESİN ÇÖZÜM: Kutu içine hapsedip ortalama */}
       {isEmergencyVideoPlaying && (
-        <View style={{ position: 'absolute', top: 0, left: 0, width: windowWidth, height: windowHeight, backgroundColor: '#000', zIndex: 1000, elevation: 100 }}>
-          <Video
-            source={acilInisVideo}
-            style={{ width: windowWidth, height: windowHeight }}
-            resizeMode={ResizeMode.COVER}
+        <ImageBackground 
+          source={{ uri: theme.images.background }} 
+          style={{ position: 'absolute', top: 0, left: 0, width: windowWidth, height: windowHeight, zIndex: 1000, justifyContent: 'center', alignItems: 'center' }}
+          resizeMode="cover"
+        >
+          {/* Gökyüzü manzarasını hafifçe karartmak için yarı saydam katman */}
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} />
+          
+          <View style={{ width: '90%', maxWidth: 800, aspectRatio: 16/9, backgroundColor: 'transparent', borderRadius: 20, overflow: 'hidden', alignSelf: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 10}, shadowOpacity: 0.5, shadowRadius: 20, elevation: 15 }}>
+            <Video
+              source={acilInisVideo}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode={ResizeMode.COVER}
             shouldPlay={true}
             isMuted={true}
             isLooping={false}
@@ -277,7 +285,8 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
               }
             }}
           />
-        </View>
+          </View>
+        </ImageBackground>
       )}
 
       {/* Emergency Landing Modal - Native Modal yerine Web ile %100 uyumlu Absolute View kullanıldı */}
