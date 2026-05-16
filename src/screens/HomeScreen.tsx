@@ -20,7 +20,7 @@ import { signOut } from 'firebase/auth';
 import { auth, db } from '../services/firebaseConfig';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { AuthContext } from '../context/AuthContext';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { Theme } from '../theme';
 import { useThemeContext } from '../context/ThemeContext';
 import { CITIES, filterDestinations, calculateXP, City } from '../utils/flightLogic';
@@ -43,8 +43,19 @@ export default function HomeScreen({ navigation }: Props) {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   // Time Parameter
-  const [targetDuration, setTargetDuration] = useState<string>('');
+  const [targetDuration, setTargetDuration] = useState<string>('25'); // Default to 25 or empty string
+  const route = useRoute<RouteProp<Record<string, { recommendedDuration?: number }>, string>>();
   
+  // Eğer AI bir süre önermişse (Acil iniş dönüşü), onu otomatik olarak süre alanına yaz
+  useEffect(() => {
+    if (route.params?.recommendedDuration) {
+      setTargetDuration(route.params.recommendedDuration.toString());
+      setPhase(0);
+      setOriginCity(null);
+      setActiveFlight(null);
+    }
+  }, [route.params?.recommendedDuration]);
+
   // Phase States (0: Input, 1: OriginSpin, 2: DestSpin, 3: Ticket)
   const [phase, setPhase] = useState<number>(0);
 

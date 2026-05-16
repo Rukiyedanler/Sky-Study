@@ -9,7 +9,7 @@ if (!apiKey) {
 }
 
 // Gemini İstemcisini başlat
-const genAI = new GoogleGenerativeAI(apiKey || "");
+const genAI = new GoogleGenerativeAI(apiKey?.trim() || "");
 
 export interface AiAnalysisResult {
   tespit: string;
@@ -40,9 +40,9 @@ export const analyzeFlightHistory = async (flightData: FlightRecord[]): Promise<
       };
     }
 
-    // Modeli çağır (gemini-1.5-flash)
+    // Modeli çağır (2026 ve sonrası için en güncel flash modeli)
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-flash-latest",
       systemInstruction: SYSTEM_PROMPT 
     });
 
@@ -54,20 +54,26 @@ export const analyzeFlightHistory = async (flightData: FlightRecord[]): Promise<
     const response = await result.response;
     const text = response.text();
 
-    // AI bazen inatla markdown formatında (```json ... ```) dönebilir.
-    // Bunu engellemek için system prompt yazdık ama yine de tedbir alarak string'i temizliyoruz:
-    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    // AI bazen gevezelik edebilir, JSON kısmını garantiye alalım:
+    let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const startIndex = cleanText.indexOf('{');
+    const endIndex = cleanText.lastIndexOf('}');
+    
+    if (startIndex !== -1 && endIndex !== -1) {
+      cleanText = cleanText.substring(startIndex, endIndex + 1);
+    }
 
     // String'i JSON nesnesine çevir
     const parsedData = JSON.parse(cleanText) as AiAnalysisResult;
 
     return parsedData;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Yapay Zeka Kara Kutu Analiz Hatası:", error);
     // Hata durumunda uygulamanın çökmemesi için varsayılan (fallback) bir değer döndür
+    // Hatayı UI'da görebilmek için tespiti değiştiriyoruz
     return {
-      tespit: "Kara Kutu analiz sistemine anlık olarak ulaşılamıyor, ancak uçuşlarımıza devam edebiliriz.",
+      tespit: "Hata detayı: " + (error.message || "Bilinmeyen hata"),
       oneri_sure_dk: 30,
       motivasyon_metni: "Kısa bir türbülans! Lütfen odaklanmaya manuel devam et."
     };

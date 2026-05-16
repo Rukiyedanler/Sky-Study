@@ -11,6 +11,7 @@ import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ActiveFlightScreen from '../screens/ActiveFlightScreen';
 import LandingSuccessScreen from '../screens/LandingSuccessScreen';
+import EmergencySummaryScreen from '../screens/EmergencySummaryScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -39,6 +40,13 @@ export type MainStackParamList = {
     LandingSuccess: {
         route: string;
         duration: number;
+    };
+    EmergencySummary: {
+        originId: string;
+        destId: string;
+        route: string;
+        plannedDuration: number;
+        actualDuration: number;
     };
 };
 
@@ -148,6 +156,7 @@ const MainNavigator = () => (
         <MainStack.Screen name="MainDrawer" component={Platform.OS === 'web' ? AppTabNavigator : AppDrawerNavigator} />
         <MainStack.Screen name="ActiveFlight" component={ActiveFlightScreen} />
         <MainStack.Screen name="LandingSuccess" component={LandingSuccessScreen} options={{ animation: 'fade' }} />
+        <MainStack.Screen name="EmergencySummary" component={EmergencySummaryScreen} options={{ animation: 'fade' }} />
     </MainStack.Navigator>
 );
 

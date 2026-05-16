@@ -178,25 +178,15 @@ export default function ActiveFlightScreen({ route, navigation }: Props) {
       AsyncStorage.setItem('@cancel_limit', JSON.stringify(cancelData)).catch(() => {});
     }).catch(e => console.warn('Limit okuma hatası:', e));
     
-    // 2. Firebase işlemini arka planda yap (fire-and-forget)
-    if (user) {
-      const [departure, arrival] = flightRoute.split('-').map(s => s.trim());
-      addDoc(collection(db, 'flights'), {
-        userId: user.uid,
-        userEmail: user.email || 'Anonim',
-        departure: departure || 'Bilinmiyor',
-        arrival: arrival || 'Bilinmiyor',
-        duration: duration,
-        xp: 0,
-        status: 'failed',
-        date: new Date().toISOString()
-      }).catch(error => console.warn('Firebase iptal kaydı hatası:', error));
-    }
+    // 2. Anket ve Yapay Zeka analiz ekranına yönlendir
+    const actualDurationMinutes = Math.round((totalSeconds - timeLeft) / 60);
     
-    // 3. ANINDA ANA EKRANA DÖN! Hiçbir promise beklenmiyor.
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MainDrawer' }],
+    navigation.replace('EmergencySummary', {
+      originId,
+      destId,
+      route: flightRoute,
+      plannedDuration: duration,
+      actualDuration: actualDurationMinutes
     });
   };
 
